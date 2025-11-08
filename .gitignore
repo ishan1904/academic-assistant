@@ -1,0 +1,67 @@
+# ─────────────────────────────
+# Python + Flask Project Ignore Rules
+# ─────────────────────────────
+
+# Byte-compiled / cache files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+uta_env/
+.env
+*.env
+
+# Flask instance / config folder
+instance/
+
+# Local data & temporary folders
+uploads/*
+output/*
+temp/*
+New Folder/*
+figures/*
+!uploads/.gitkeep
+!output/.gitkeep
+!temp/.gitkeep
+!figures/.gitkeep
+
+# Logs & reports
+*.log
+*.tmp
+
+# IDE / editor metadata
+.vscode/
+.idea/
+*.swp
+
+# macOS / Windows system files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# PDFs / large test artifacts
+*.pdf
+*.docx
+*.pptx
+*.xlsx
+*.csv
+
+# Temporary generated files
+*.bak
+*.old
+*.zip
+*.tar
+*.gz
+
+# Pip / build artifacts
+build/
+dist/
+*.egg-info/
+
+# ─────────────────────────────
+# Notes:
+# - Keep only placeholders (.gitkeep) for empty folders.
+# - Don't commit real .env or test PDFs.
+# ─────────────────────────────

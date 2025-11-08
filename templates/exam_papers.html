@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Generated Exam Papers</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            text-align: center;
+            padding: 20px;
+        }
+        .container {
+            max-width: 800px;
+            margin: 20px auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0px 0px 10px gray;
+        }
+        .exam-title {
+            font-size: 22px;
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .question {
+            text-align: left;
+            margin: 10px 0;
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        .btn {
+            background: #28a745;
+            color: white;
+            padding: 10px 15px;
+            border: none;
+            cursor: pointer;
+            margin: 5px;
+            display: inline-block;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background: #218838;
+        }
+        .btn-back {
+            background: #007bff;
+        }
+        .btn-back:hover {
+            background: #0056b3;
+        }
+        .button-container {
+            margin-top: 20px;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Generated Exam Papers</h1>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        {% if exam_papers %}
+            {% if exam_papers is string %}
+                <!-- Handle case where exam_papers is a raw string -->
+                {% for line in exam_papers.split('\n') %}
+                    {% if line.strip().startswith('Exam 1 - Student') %}
+                        <div class="exam-container">
+                            <h2 class="exam-title">{{ line.strip() }}</h2>
+                    {% elif line.strip() %}
+                        <div class="question">{{ line.strip() }}</div>
+                    {% elif line == '' and loop.previtem.strip().startswith('Exam 1 - Student') %}
+                        </div> <!-- Close the previous exam-container -->
+                    {% endif %}
+                {% endfor %}
+                </div> <!-- Close the last exam-container if not already closed -->
+            {% else %}
+                <!-- Handle case where exam_papers is a structured object (e.g., dict or list) -->
+                {% for student, questions in exam_papers.items() %}
+                    <div class="exam-container">
+                        <h2 class="exam-title">Exam 1 - {{ student }}</h2>
+                        {% for question in questions %}
+                            <div class="question">{{ question }}</div>
+                        {% endfor %}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% else %}
+            <p>No exam papers generated.</p>
+        {% endif %}
+        <div class="button-container">
+            {% if exam_filename %}
+                <a href="{{ url_for('download_exam_papers', exam_filename=exam_filename) }}" class="btn">
+                    Download Exam Papers
+                </a>
+            {% endif %}
+            <a href="{{ url_for('dashboard') }}" class="btn btn-back">
+                Back to Dashboard
+            </a>
+        </div>
+    </div>
+</body>
+</html>

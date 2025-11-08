@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Select Sections Claude</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #eef2f3, #8e9eab);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 90%;
+            display: flex;
+            flex-direction: column;
+            height: 95%;
+        }
+
+        .content {
+            width: 100%;
+            flex-grow: 1;
+            overflow-y: auto;
+        }
+
+        h1 {
+            text-align: center;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .section input[type="checkbox"] {
+            margin-right: 10px;
+        }
+
+        button[type="submit"],
+        .back-button {
+            padding: 10px 15px;
+            color: white;
+            border: none;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+
+        button[type="submit"] {
+            background-color: #4CAF50;
+        }
+
+        button[type="submit"]:hover {
+            background-color: #45a049;
+        }
+
+        .back-button {
+            background-color: #f44336;
+            display: inline-block;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .back-button:hover {
+            background-color: #e53935;
+        }
+
+        .point {
+            margin-left: 25px;
+            line-height: 1.6;
+        }
+
+        .sub-point {
+            margin-left: 45px;
+            font-style: italic;
+        }
+
+        ul.examples {
+            margin-left: 25px;
+            list-style-type: disc;
+        }
+
+        h2, h3 {
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Select Sections</h1>
+        <form action="/select_sections_claude" method="POST">
+            <input type="hidden" name="temp_filename" value="{{ temp_filename }}">
+
+            {% if structured_data.sections %}
+                <h2>Course: {{ structured_data.course_name }}</h2>
+                <h3>Professor: {{ structured_data.professor_name }}</h3>
+                <p>Select which sections to keep:</p>
+
+                {% for section in structured_data.sections %}
+                    <div class="section">
+                        <!-- Section Title -->
+                        <input type="checkbox" id="section_{{ loop.index }}" name="sections" value="{{ section.section_title }}">
+                        <label for="section_{{ loop.index }}">
+                            <strong>{{ section.section_title }}</strong>
+                        </label>
+
+                        <!-- Section Description -->
+                        <div><strong>Description:</strong> {{ section.description }}</div>
+
+                        <!-- Section Examples -->
+                        {% if section.examples %}
+                            <div>
+                                <strong>Examples:</strong>
+                                <ul>
+                                    {% for example in section.examples %}
+                                        <li>{{ example }}</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No sections available for selection.</p>
+            {% endif %}
+
+            <button type="submit">Submit</button>
+        </form>
+        <a href="/" class="back-button">Back</a>
+    </div>
+</body>
+
+
+</html>

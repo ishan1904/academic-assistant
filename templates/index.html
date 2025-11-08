@@ -1,0 +1,904 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI-Powered Academic Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #eef2f3, #8e9eab);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 10px 0;
+            background: #4CAF50;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            margin: -20px -20px 20px -20px;
+        }
+
+        /* New Navigation Bar Styling */
+        .nav-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 20px;
+            background: #f9f9f9;
+            border-bottom: 1px solid #ddd;
+            margin-bottom: 20px;
+        }
+
+        .nav-bar .welcome-user {
+            font-weight: bold;
+            color: #4CAF50;
+        }
+
+        .nav-bar a {
+            color: #4CAF50;
+            text-decoration: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            transition: background 0.3s;
+        }
+
+        .nav-bar a:hover {
+            background: #e0e0e0;
+        }
+
+        .nav-bar .logout-btn {
+            background: #ff4444;
+            color: white;
+        }
+
+        .nav-bar .logout-btn:hover {
+            background: #cc0000;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .options-menu {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+        }
+
+        .option-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+            max-width: 250px;
+        }
+
+        .option-btn:hover {
+            background: #45a049;
+        }
+
+        .option-btn.active {
+            background: #388E3C;
+        }
+
+        .content-section {
+            display: none;
+            padding: 20px;
+            border-top: 1px solid #ddd;
+        }
+
+        .content-section.active {
+            display: block;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+        }
+
+        p {
+            margin-bottom: 15px;
+        }
+
+        label {
+            font-weight: bold;
+            margin-top: 10px;
+            display: block;
+        }
+
+        input,
+        select,
+        textarea,
+        button {
+            width: 100%;
+            margin-top: 5px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #4CAF50;
+            color: white;
+            cursor: pointer;
+            border: none;
+            font-size: 16px;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .final-output {
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 4px;
+            border: 1px solid #ccc;
+        }
+
+        .section-title {
+            font-weight: bold;
+            margin-top: 10px;
+        }
+
+        .error, .success {
+            text-align: center;
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        /* Modal Styling */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background-color: white;
+            border-radius: 8px;
+            padding: 25px;
+            width: 40%;
+            max-width: 500px;
+            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            animation: fadeIn 0.3s ease-in-out;
+            position: relative;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 20px;
+            cursor: pointer;
+            color: #333;
+        }
+
+        .close-btn:hover {
+            color: red;
+        }
+
+        .modal-content button {
+            width: 48%;
+            padding: 12px;
+            margin: 10px 5px;
+            font-size: 15px;
+            border-radius: 6px;
+        }
+
+        /* Processing Screen Styling */
+        #processingScreen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        #processingContent {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            width: 300px;
+        }
+
+        #processingIcon {
+            font-size: 24px;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+
+        #loadingSpinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: scale(0.9);
+            }
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>AI-Powered Academic Assistant</h1>
+        </div>
+
+        <!-- Navigation Bar -->
+        <div class="nav-bar">
+            {% if session.username %}
+                <span class="welcome-user">Welcome, {{ session.username }}!</span>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Logout</a>
+            {% else %}
+                <span></span> <!-- Placeholder to maintain layout -->
+                <div>
+                    <a href="{{ url_for('login') }}">Login</a>
+                    <a href="{{ url_for('signup') }}">Signup</a>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Welcome Section -->
+        <section class="welcome">
+            <h1>Welcome to Your AI-Powered Academic Assistant!</h1>
+            <p>This platform simplifies studying, teaching, and professional tasks with the power of artificial intelligence (AI). Whether a student, educator, or professional, various documents—such as syllabi, chapters, resumes, or presentation slides—can be analyzed to generate useful insights and tailored outputs. Eliminate manual effort as AI streamlines the process, making tasks more efficient and effective.</p>
+            
+            <h3>What You Can Do:</h3>
+            <ul>
+                <li><strong>Syllabus Enhancement:</strong> Get AI-powered recommendations to improve syllabus structure, clarity, and effectiveness. Insights help align the syllabus with student needs, industry trends, and academic best practices, ensuring a well-organized and engaging course outline.</li>
+                <li><strong>Chapter Insights:</strong> Extract key concepts and generate practice questions from a chapter (PDF or PPT). This helps in breaking down complex topics for better understanding, making it a valuable tool for both studying and teaching.</li>
+                <li><strong>Recommendation Letter Assistance:</strong> Generate a professional recommendation letter based on a resume (.pdf or .docx). This helps in crafting a strong, well-structured letter, making it ideal for job applications.</li>
+                <li><strong>Exam Questions Generation:</strong> Generate unique exam questions from PowerPoint slides (.pptx). This helps in creating effective assessments, making it a useful tool for both teachers and students.</li>
+            </ul>
+
+            <p><strong>How to Get Started:</strong> Pick an option below, upload your file, choose an AI model (OpenAI or Claude), and click a button to see the magic happen. </p>
+        </section>
+
+        <!-- Main Card -->
+        <div class="card">
+            <!-- Options Menu -->
+            <div class="options-menu">
+                <button class="option-btn" onclick="showSection('syllabus')">Syllabus Enhancement</button>
+                <button class="option-btn" onclick="showSection('chapter')">Chapter Insights/Questions</button>
+                <button class="option-btn" onclick="showSection('resume')">Recommendation Letter Assistance</button>
+                <button class="option-btn" onclick="showSection('exam')">Exam Questions Generation</button>
+                <button class="option-btn" onclick="showSection('grade')">Grading</button>
+              </div>
+              
+
+            <!-- Content Sections -->
+            <div id="syllabus-section" class="content-section active">
+                <h2>Syllabus Enhancement</h2>
+                <p>Upload your syllabus to analyze and get AI-driven recommendations.</p>
+                <form action="/upload" method="POST" enctype="multipart/form-data" id="syllabusForm">
+                    <label for="file">Choose a PDF or DOCX file:</label>
+                    <input type="file" id="file" name="file" accept=".pdf, .docx" required>
+
+                    <label for="ai_model">Select AI Model:</label>
+                    <select id="ai_model" name="ai_model">
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                    </select>
+
+                    <button type="submit" name="action" value="structured">Enhance Syllabus</button>
+                </form>
+            </div>
+
+            <div id="chapter-section" class="content-section">
+                <h2>Chapter Insights/Questions</h2>
+                <p>Upload a chapter module (PDF or PPT) to generate questions or extract core concepts.</p>
+                <form id="chapterForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <label for="chapter_file">Choose a PDF or PPT file:</label>
+                    <input type="file" id="chapter_file" name="chapter_file" accept=".pdf, .ppt, .pptx" required>
+
+                    <label for="chapter_ai_model">Select AI Model:</label>
+                    <select id="chapter_ai_model" name="ai_model">
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                    </select>
+
+                    <div class="button-group">
+                        <button type="button" onclick="showModal()">Customize Questions</button>
+                        <button type="submit" name="action" value="concepts">Extract Core Concepts</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="resume-section" class="content-section">
+                <h2>Recommendation Letter Assistance</h2>
+                <p>Upload your resume to generate a recommendation letter.</p>
+                <form id="recUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <label for="resume_file">Choose a PDF or DOCX file:</label>
+                    <input type="file" id="resume_file" name="resume_file" accept=".pdf, .docx" required>
+
+                    <label for="rec_ai_model">Select AI Model:</label>
+                    <select id="rec_ai_model" name="ai_model">
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                    </select>
+
+                    <button type="button" onclick="showRecModal()">Generate Recommendation Letter</button>
+                </form>
+            </div>
+
+            <div id="exam-section" class="content-section">
+                <h2>Exam Questions Generation</h2>
+                <p>Upload PPTX files to generate unique question papers for exams.</p>
+                <form id="examUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <label for="exam_files">Choose PPTX files for Exam:</label>
+                    <input type="file" id="exam_files" name="exam_files" accept=".pptx, .ppt" multiple required>
+
+                    <label for="exam_ai_model">Select AI Model:</label>
+                    <select id="exam_ai_model" name="ai_model">
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                    </select>
+
+                    <input type="hidden" name="action" value="exam_papers">
+                    <button type="button" onclick="showExamModal()">Generate Exam Questions</button>
+                </form>
+            </div>
+        </div>
+
+        <div id="grade-section" class="content-section">
+            <h2>Grading (Key + Answer PDFs)</h2>
+            <p>Upload a <strong>Key PDF</strong> and an <strong>Answer Sheet PDF</strong>. We’ll evaluate and show results below.</p>
+          
+            <form id="gradeUploadForm" action="{{ url_for('grade_run') }}" method="POST" enctype="multipart/form-data">
+              <label>Key PDF:</label>
+              <input type="file" name="key_pdf" accept="application/pdf" required>
+          
+              <label>Answer Sheet PDF:</label>
+              <input type="file" name="answer_pdf" accept="application/pdf" required>
+          
+              <button type="submit">Run Evaluation</button>
+                <!-- 👇 new OCR/async button -->
+              <!-- <form action="{{ url_for('grade_async') }}" method="POST" enctype="multipart/form-data" style="display:inline;">
+                <input type="hidden" name="key_pdf" id="async_key_input">
+                <input type="hidden" name="ans_pdf" id="async_ans_input">
+                <button type="button" onclick="runAsyncGrade()">Run Evaluation with OCR (Async)</button>
+              </form> -->
+            </form>
+          
+            <!-- Results will be injected here -->
+            <div id="grade-results" class="final-output" style="display:none; margin-top:16px;"></div>
+          </div>
+          
+          
+
+        <!-- Right Section -->
+        <div class="card">
+            <h2>AI Recommendations</h2>
+            {% if filtered_sections %}
+            <div class="final-output">
+                <h3>Course: {{ course_name }}</h3>
+                <h4>Professor: {{ professor_name }}</h4>
+
+                {% for section in filtered_sections %}
+                <div class="section">
+                    <div class="section-title">{{ section.section|default(section.section_title, true) }}</div>
+                    <div class="section-description">
+                        <ol>
+                            {% if section.description %}
+                            {% if section.description|is_iterable and section.description is not string %}
+                            {% for desc in section.description %}
+                            <li>{{ desc }}</li>
+                            {% endfor %}
+                            {% else %}
+                            <li>{{ section.description }}</li>
+                            {% endif %}
+                            {% else %}
+                            <li>No description available.</li>
+                            {% endif %}
+                        </ol>
+                    </div>
+                    {% set examples = section.get('examples') or section.get('EXAMPLES') or section.get('recommendations') %}
+                    {% if examples %}
+                    <strong>Examples/Recommendations:</strong>
+                    <ul class="examples">
+                        {% for example in examples %}
+                        <li>{{ example }}</li>
+                        {% endfor %}
+                    </ul>
+                    {% endif %}
+                </div>
+                {% endfor %}
+
+                <!-- Download Button -->
+                {% if structured_filename or concepts_filename %}
+                <div class="button-group" style="margin-top: 20px;">
+                    {% if structured_filename %}
+                    <a href="/download/recommendations/{{ structured_filename }}" class="download-btn" download>
+                        Download Syllabus Recommendations
+                    </a>
+                    {% endif %}
+                    {% if concepts_filename %}
+                    <a href="/download/recommendations/{{ concepts_filename }}" class="download-btn" download>
+                        Download Core Concepts
+                    </a>
+                    {% endif %}
+                </div>
+                {% endif %}
+            </div>
+            {% else %}
+            <p>AI recommendations will appear after processing....</p>
+            {% endif %}
+        </div>
+
+        <!-- Error and Success Messages -->
+        {% if error %}
+        <div class="error">{{ error }}</div>
+        {% endif %}
+
+        {% if success %}
+        <div class="success">{{ success }}</div>
+        {% endif %}
+    </div>
+
+    <!-- Recommendation Modal -->
+    <div id="recModal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeRecModal()">×</span>
+            <h2>Enter Recommender Details</h2>
+            <form id="recForm" method="POST" action="/upload" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="recommendation">
+                <input type="hidden" name="ai_model" id="hidden_rec_ai_model">
+                <input type="hidden" name="resume_file" id="hidden_resume_file">
+
+                <label for="recommender_name">Recommender Name:</label>
+                <input type="text" id="recommender_name" name="recommender_name" required>
+
+                <label for="position">Position:</label>
+                <input type="text" id="position" name="position" required>
+
+                <label for="email">Email:</label>
+                <input type="email" id="email" name="email" required>
+
+                <button type="submit">Generate Letter</button>
+                <button type="button" onclick="closeRecModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Questions Modal -->
+    <div id="questionModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeModal()">×</span>
+            <h2>Customize Questions</h2>
+            <form id="modalForm" method="POST" action="/upload" enctype="multipart/form-data">
+                <input type="hidden" name="action" value="questions">
+                <input type="hidden" name="ai_model" id="hidden_ai_model">
+                <input type="hidden" name="chapter_file" id="hidden_chapter_file">
+
+                <label for="modal_total_questions">Total Questions:</label>
+                <input type="number" id="modal_total_questions" name="total_questions" min="1" required>
+
+                <label for="modal_mcq_count">MCQs:</label>
+                <input type="number" id="modal_mcq_count" name="mcq_count" min="0" required>
+
+                <label for="modal_tf_count">True/False:</label>
+                <input type="number" id="modal_tf_count" name="tf_count" min="0" required>
+
+                <label for="modal_others_count">Other Types:</label>
+                <input type="number" id="modal_others_count" name="others_count" min="0" required>
+
+                <button type="submit">Generate Questions</button>
+                <button type="button" onclick="closeModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Exam Papers Modal -->
+    <div id="examModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="close-btn" onclick="closeExamModal()">×</span>
+            <h2>Generate Exam Papers</h2>
+            <form id="examModalForm">
+                <label for="num_students">How many students?</label>
+                <input type="number" id="num_students" name="num_students" min="1" required>
+
+                <label for="questions_per_student">How many questions per student?</label>
+                <input type="number" id="questions_per_student" name="questions_per_student" min="1" required>
+
+                <button type="button" onclick="submitExamForm()">Generate</button>
+                <button type="button" onclick="closeExamModal()">Cancel</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Processing Screen -->
+    <div id="processingScreen">
+        <div id="processingContent">
+            <i id="processingIcon" class="fas fa-info-circle"></i>
+            <h2>Processing...</h2>
+            <div id="loadingSpinner"></div>
+            <p>Please wait while we process your request.</p>
+        </div>
+    </div>
+
+    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js" crossorigin="anonymous"></script>
+    <script>
+        // Show section based on option button click
+        function showSection(section) {
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            document.querySelector(`.option-btn[onclick*="showSection('${section}')"]`).classList.add('active');
+
+            const sections = document.querySelectorAll('.content-section');
+            sections.forEach(s => s.classList.remove('active'));
+            document.getElementById(`${section}-section`).classList.add('active');
+        }
+
+        // Initial load: show Syllabus section by default
+        window.onload = function() {
+            showSection('syllabus');
+            hideProcessing();
+        };
+
+        function showModal() {
+            const fileInput = document.getElementById('chapter_file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please select a file before customizing questions.");
+                return;
+            }
+            document.getElementById('hidden_ai_model').value = document.getElementById('chapter_ai_model').value;
+            document.getElementById('questionModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+            document.getElementById('questionModal').style.display = 'none';
+        }
+
+        document.getElementById('modalForm').addEventListener('submit', function (event) {
+            event.preventDefault();
+            showProcessing();
+            const chapterForm = document.getElementById('chapterForm');
+            const modalTotalQuestions = document.getElementById('modal_total_questions').value;
+            const modalMcqCount = document.getElementById('modal_mcq_count').value;
+            const modalTfCount = document.getElementById('modal_tf_count').value;
+            const modalOthersCount = document.getElementById('modal_others_count').value;
+
+            const totalQuestionsInput = document.createElement('input');
+            totalQuestionsInput.type = 'hidden';
+            totalQuestionsInput.name = 'total_questions';
+            totalQuestionsInput.value = modalTotalQuestions;
+
+            const mcqCountInput = document.createElement('input');
+            mcqCountInput.type = 'hidden';
+            mcqCountInput.name = 'mcq_count';
+            mcqCountInput.value = modalMcqCount;
+
+            const tfCountInput = document.createElement('input');
+            tfCountInput.type = 'hidden';
+            tfCountInput.name = 'tf_count';
+            tfCountInput.value = modalTfCount;
+
+            const othersCountInput = document.createElement('input');
+            othersCountInput.type = 'hidden';
+            othersCountInput.name = 'others_count';
+            othersCountInput.value = modalOthersCount;
+
+            const actionInput = document.createElement('input');
+            actionInput.type = 'hidden';
+            actionInput.name = 'action';
+            actionInput.value = 'questions';
+
+            chapterForm.appendChild(totalQuestionsInput);
+            chapterForm.appendChild(mcqCountInput);
+            chapterForm.appendChild(tfCountInput);
+            chapterForm.appendChild(othersCountInput);
+            chapterForm.appendChild(actionInput);
+
+            chapterForm.submit();
+        });
+
+        function showRecModal() {
+            const fileInput = document.getElementById('resume_file');
+            const aiModelSelect = document.getElementById('rec_ai_model');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please select a resume file before generating a recommendation letter.");
+                return;
+            }
+
+            if (!aiModelSelect.value) {
+                alert("Please select an AI model (OpenAI or Claude) before proceeding.");
+                return;
+            }
+
+            document.getElementById('hidden_rec_ai_model').value = aiModelSelect.value;
+            document.getElementById('recModal').style.display = 'flex';
+        }
+
+        function closeRecModal() {
+            document.getElementById('recModal').style.display = 'none';
+        }
+
+        document.getElementById("recForm").addEventListener("submit", function (event) {
+            event.preventDefault();
+            showProcessing();
+            const fileInput = document.getElementById("resume_file");
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("File not found. Please upload a resume file before submitting.");
+                hideProcessing();
+                return;
+            }
+
+            const formData = new FormData(this);
+            formData.append("resume_file", fileInput.files[0]);
+
+            fetch("/upload", {
+                method: "POST",
+                body: formData
+            })
+            .then(response => response.text())
+            .then(data => {
+                console.log("Response received:", data);
+                document.body.innerHTML = data;
+                hideProcessing();
+            })
+            .catch(error => {
+                console.error("Error:", error);
+                hideProcessing();
+                alert("An error occurred while processing your request.");
+            });
+        });
+
+        function showExamModal() {
+            const fileInput = document.getElementById('exam_files');
+            const aiModelSelect = document.getElementById('exam_ai_model');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please select at least one PPTX file before generating exam papers.");
+                return;
+            }
+
+            if (!aiModelSelect.value) {
+                alert("Please select an AI model (OpenAI or Claude) before proceeding.");
+                return;
+            }
+
+            document.getElementById('examModal').style.display = 'flex';
+        }
+
+        function closeExamModal() {
+            document.getElementById('examModal').style.display = 'none';
+        }
+
+        function submitExamForm() {
+            const numStudents = document.getElementById('num_students').value;
+            const questionsPerStudent = document.getElementById('questions_per_student').value;
+
+            if (!numStudents || !questionsPerStudent || numStudents < 1 || questionsPerStudent < 1) {
+                alert('Please enter valid numbers for students and questions.');
+                return;
+            }
+
+            showProcessing();
+            const examForm = document.getElementById('examUploadForm');
+            const numStudentsInput = document.createElement('input');
+            numStudentsInput.type = 'hidden';
+            numStudentsInput.name = 'num_students';
+            numStudentsInput.value = numStudents;
+
+            const questionsInput = document.createElement('input');
+            questionsInput.type = 'hidden';
+            questionsInput.name = 'questions_per_student';
+            questionsInput.value = questionsPerStudent;
+
+            examForm.appendChild(numStudentsInput);
+            examForm.appendChild(questionsInput);
+
+            examForm.submit();
+        }
+
+        document.getElementById("examUploadForm").addEventListener("submit", function(event) {
+            const fileInput = document.getElementById("exam_files");
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please select at least one PPTX file before generating exam papers.");
+                event.preventDefault();
+                return;
+            }
+
+            console.log("Selected file:", fileInput.files[0]);
+        });
+
+        document.getElementById("syllabusForm").addEventListener("submit", function(event) {
+            showProcessing();
+        });
+
+        function showProcessing() {
+            document.getElementById('processingScreen').style.display = 'flex';
+        } 
+
+        function hideProcessing() {
+            document.getElementById('processingScreen').style.display = 'none';
+        }
+        
+            
+        (function () {
+        const gradeFormEl = document.getElementById("gradeUploadForm");
+        const resultsEl = document.getElementById("grade-results");
+
+        if (!gradeFormEl) return;
+
+        gradeFormEl.addEventListener("submit", async function (e) {
+            e.preventDefault();
+
+            // Validate files
+            const [keyInput, ansInput] = gradeFormEl.querySelectorAll('input[type="file"]');
+            if (!keyInput?.files?.length || !ansInput?.files?.length) {
+            alert("Please upload both the Key PDF and the Answer Sheet PDF.");
+            return;
+            }
+
+            const formData = new FormData(gradeFormEl);
+
+            // 30s timeout so overlay can't hang forever
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+            try {
+            showProcessing();
+
+            const res = await fetch(gradeFormEl.action || "{{ url_for('grade_run') }}", {
+                method: "POST",
+                body: formData,
+                headers: { "X-Requested-With": "XMLHttpRequest" },
+                signal: controller.signal
+            });
+
+            const html = await res.text();
+
+            // If login_required redirected us, Flask will serve the login page.
+            const wasRedirected = res.redirected || /<form[^>]*action="[^"]*login/i.test(html);
+
+            resultsEl.style.display = "block";
+
+            if (!res.ok || wasRedirected) {
+                resultsEl.innerHTML = `
+                <div class="error">
+                    Grading failed ${wasRedirected ? "(authentication required)" : `(status ${res.status})`}.
+                </div>
+                <div class="final-output" style="margin-top:10px; max-height:300px; overflow:auto;">
+                    ${html}
+                </div>`;
+                return;
+            }
+
+            // Success: inject the returned HTML (grade_result.html or fragment)
+            resultsEl.innerHTML = html;
+
+            } catch (err) {
+            resultsEl.style.display = "block";
+            resultsEl.innerHTML = `
+                <div class="error">
+                ${err.name === "AbortError" ? "Request timed out." : "Failed to run evaluation."}
+                </div>`;
+            console.error("Grading AJAX error:", err);
+            } finally {
+            clearTimeout(timeoutId);
+            hideProcessing(); // always hide spinner
+            }
+        });
+        })();
+
+
+
+
+    </script>
+    <script>
+        async function runAsyncGrade() {
+        const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
+        const ansFile = document.querySelector('input[name="answer_pdf"]').files[0];
+        if (!keyFile || !ansFile) {
+            alert("Please upload both the Key and Answer PDFs first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("key_pdf", keyFile);
+        formData.append("ans_pdf", ansFile);
+
+        // If you already have a spinner function, use it:
+        if (typeof showProcessing === "function") showProcessing();
+
+        const res = await fetch("{{ url_for('grade_async') }}", {
+            method: "POST",
+            body: formData
+        });
+
+        if (typeof hideProcessing === "function") hideProcessing();
+
+        if (res.redirected) {
+            window.location.href = res.url; // go to /status/<task_id>
+        } else {
+            const html = await res.text();
+            document.body.innerHTML = html;
+        }
+    }
+    </script>
+
+</body>
+
+</html>

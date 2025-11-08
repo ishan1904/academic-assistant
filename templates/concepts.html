@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Core Concepts</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #eef2f3, #8e9eab);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            width: 50%;
+            max-height: 90vh;
+            overflow-y: auto;
+            text-align: center;
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .concepts {
+            text-align: left;
+            background: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #ccc;
+            overflow: auto;
+            font-family: monospace;
+            white-space: pre-wrap;
+        }
+        .btn {
+            display: inline-block;
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+        .btn:hover {
+            background-color: #45a049;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Core Concepts</h1>
+        {% if error %}
+            <p class="error">{{ error }}</p>
+        {% endif %}
+        <div class="concepts">
+            {{ core_concepts | safe }}
+        </div>
+        {% if concepts_filename %}
+            <a href="{{ url_for('download_recommendations', recommendation_filename=concepts_filename) }}" class="btn">
+                Download Concepts
+            </a>
+        {% endif %}
+        <a href="{{ url_for('dashboard') }}" class="btn">
+            Back to Dashboard
+        </a>
+    </div>
+</body>
+</html>

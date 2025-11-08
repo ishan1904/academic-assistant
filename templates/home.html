@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to AI Powered Academic Assistant</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(to right, #eef2f3, #8e9eab);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 10px 0;
+            background: #4CAF50;
+            color: white;
+            border-radius: 8px 8px 0 0;
+            margin: -20px -20px 20px -20px;
+        }
+
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .options-menu {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-top: 20px;
+        }
+
+        .option-btn {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            flex: 1;
+            max-width: 250px;
+            text-align: center;
+            text-decoration: none;
+        }
+
+        .option-btn:hover {
+            background: #45a049;
+        }
+
+        h2 {
+            margin-bottom: 10px;
+            text-align: center;
+            color: #333;
+        }
+
+        p {
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .feature-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            justify-content: center;
+        }
+
+        .feature {
+            flex: 1;
+            min-width: 250px;
+            max-width: 300px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .feature h3 {
+            margin-top: 0;
+            color: #4CAF50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Welcome to AI Powered Academic Assistant</h1>
+            <p>Your ultimate tool for educational content creation and analysis</p>
+        </div>
+        <div class="card">
+            <h2>Explore Our Features</h2>
+            <p>AI Powered Academic Assistant tool empowers educators and students with tools to streamline academic tasks. From generating questions to analyzing syllabi, our platform enhances your educational experience.</p>
+            <div class="feature-list">
+                <div class="feature">
+                    <h3>Generate Questions</h3>
+                    <p>Create customized question sets, including multiple-choice, true/false, and more, from uploaded documents.</p>
+                </div>
+                <div class="feature">
+                    <h3>Exam Papers</h3>
+                    <p>Generate unique exam papers for multiple students, tailored to your presentation slides.</p>
+                </div>
+                <div class="feature">
+                    <h3>Core Concepts</h3>
+                    <p>Extract and summarize key concepts from chapters or documents for quick review.</p>
+                </div>
+                <div class="feature">
+                    <h3>Syllabus Analysis</h3>
+                    <p>Receive structured AI-driven recommendations to enhance your course objectives.</p>
+                </div>
+                <div class="feature">
+                    <h3>Recommendation Letters</h3>
+                    <p>Generate professional letters of recommendation based on resumes for academic or career applications.</p>
+                </div>
+            </div>
+            <div class="options-menu">
+                <a href="{{ url_for('login') }}" class="option-btn">Log In to Get Started</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
