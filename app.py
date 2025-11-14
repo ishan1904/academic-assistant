@@ -39,9 +39,12 @@ from flask import (
     jsonify, session, flash, make_response
 )
 from werkzeug.utils import secure_filename
+from werkzeug.serving import WSGIRequestHandler
 
 from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
+
+from difflib import SequenceMatcher
 
 from PyPDF2 import PdfReader
 from pptx import Presentation
@@ -66,7 +69,17 @@ from dotenv import load_dotenv
 # ─────────────────────────────────────────────────────────────────────────────
 load_dotenv()
 
+import socket
+socket.setdefaulttimeout(180)  # 180 seconds global timeout
+
 app = Flask(__name__)
+
+@app.template_filter("nl2br")
+def nl2br(value):
+    """Convert newlines to <br> for clean HTML display."""
+    if not value:
+        return ""
+    return value.replace("\n", "<br>")
 
 # Core env
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "fallback_secret")
@@ -75,6 +88,11 @@ app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=1)
 app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024
+WSGIRequestHandler.protocol_version = "HTTP/1.1"
+app.config["SEND_FILE_MAX_AGE_DEFAULT"] = 0
+app.config["PERMANENT_SESSION_LIFETIME"] = 3600  # 1 hour session
+app.config["TEMPLATES_AUTO_RELOAD"] = True
+app.config["WTF_CSRF_ENABLED"] = False
 
 # Paths
 app.config["UPLOAD_FOLDER"] = os.getenv("UPLOAD_FOLDER", "uploads/")
@@ -227,6 +245,103 @@ def _preprocess_exam_text(raw: str) -> str:
     t = re.sub(r"(?i)(?=\bQuestion\s*\d+\b)", "\n", t)
     t = re.sub(r"\n{3,}", "\n\n", t)
     return t.strip()
+
+def split_into_qas_ai(text: str) -> dict:
+    """
+    AI fallback parser using Groq (LLaMA-3.1-8B-instant) to structure exam sheets.
+    Activated only when the regex parser fails or produces too few QAs.
+    Returns: {1: {"question": ..., "answer": ...}, ...}
+    """
+    from grading_agent import extract_json
+    from groq import Groq
+    import os, re
+
+    if not text or len(text.strip()) < 50:
+        print("[WARN] split_into_qas_ai: empty or invalid input text.")
+        return {}
+
+    # --- Handle large text safely ---
+    MAX_CHARS = 7000
+    if len(text) > MAX_CHARS:
+        print(f"[INFO] Large text detected ({len(text)} chars). Splitting for AI parsing...")
+        chunks = [text[i:i + MAX_CHARS] for i in range(0, len(text), MAX_CHARS)]
+        combined_qas = {}
+        for idx, chunk in enumerate(chunks):
+            print(f"[INFO] Groq parsing chunk {idx + 1}/{len(chunks)}...")
+            partial = split_into_qas_ai(chunk)
+            combined_qas.update({len(combined_qas) + i: qa for i, qa in partial.items()})
+        return combined_qas
+
+    try:
+        client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+        # 🧩 Strong, deterministic prompt to enforce JSON
+        prompt = f"""
+You are a text-structuring AI.
+
+Given the exam content below, extract *question–answer pairs* and return them
+as a **valid JSON array** of objects with exactly these keys: "question" and "answer".
+Each question should be concise (≤ 2 sentences), and answers can span multiple lines.
+If the text is long, summarize repetitive data briefly.
+
+Format STRICTLY like this:
+
+[
+  {{"question": "Q1 text", "answer": "A1 text"}},
+  {{"question": "Q2 text", "answer": "A2 text"}}
+]
+
+Text:
+{text[:6000]}
+"""
+
+        # 🧠 Call Groq model
+        resp = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            temperature=0,
+            messages=[{"role": "user", "content": prompt}],
+        )
+
+        raw = resp.choices[0].message.content.strip()
+        print("[DEBUG] Raw Groq output preview:", raw[:400])
+
+        # Normalize Groq quirks
+        clean_raw = (
+            raw.replace("<DOT>", ".")
+                .replace("≈", "=")
+                .replace("~", "")
+                .replace("=>", "=")
+        )
+
+        # --- Attempt extraction ---
+        parsed = extract_json(clean_raw)
+
+        # --- Fallback cleanup if first parse fails ---
+        if not parsed:
+            print("[INFO] First JSON parse failed — attempting cleanup...")
+            cleaned = re.sub(r"^[^{\[]+", "", raw).strip()
+            parsed = extract_json(cleaned)
+
+        # --- ✅ Handle both list and dict outputs safely ---
+        if isinstance(parsed, dict) and parsed:
+            print(f"[INFO] Groq structured {len(parsed)} question–answer pairs (dict).")
+            return parsed
+        elif isinstance(parsed, list) and len(parsed) > 0:
+            print(f"[INFO] Groq structured {len(parsed)} question–answer pairs (list).")
+            return {i + 1: qa for i, qa in enumerate(parsed)}
+        else:
+            print("[WARN] Groq AI returned empty or unrecognized structure; falling back to regex.")
+            return {}
+
+    except Exception as e:
+        print(f"[ERROR] Groq AI call failed: {e}")
+        return {}
+
+    except Exception as e:
+        print(f"[ERROR] split_into_qas_ai failed: {e}")
+        return {}
+
+
 
 def split_into_qas(text: str) -> dict:
     """
@@ -399,6 +514,165 @@ def split_into_qas(text: str) -> dict:
 #     print(f"[split_into_qas] Parsed {len(qas)} QAs")
 #     return {int(k): v for k, v in qas.items()}
 
+def robust_split_into_qas(text):
+    """
+    Smart regex + fallback parser that extracts ordered Q/A blocks.
+    Detects 'Question', 'Exercise', 'Q1:', 'Dataset', 'Compute', 'Given', etc.
+    """
+
+    # 1. Normalize spacing and remove double newlines
+    text = re.sub(r"\r", "", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{2,}", "\n", text).strip()
+
+    # 2. Main pattern — catches numbered sections or typical headers
+    pattern = re.compile(
+        r"(?:(?<=\n)|^)"
+        r"(?P<label>(?:Q(?:uestion)?|Exercise|Section|Problem)\s*\d{1,2}\s*[:.\-]?)"
+        r"(?P<body>.*?)(?=(?:\n(?:Q(?:uestion)?|Exercise|Section|Problem)\s*\d{1,2}\s*[:.\-]?|"
+        r"\n(?:Dataset|Given|Compute|Find|Task|Assignment)\b|$))",
+        flags=re.IGNORECASE | re.DOTALL
+    )
+
+    qas = []
+    matches = list(pattern.finditer(text))
+
+    if not matches:
+        # fallback if regex completely fails → single block
+        return [{"question": "", "answer": text.strip()}]
+
+    for m in matches:
+        label = m.group("label").strip()
+        body = m.group("body").strip()
+
+        # Sometimes PyPDF2 merges "Exercise 3: k-NN ... Exercise 4: Regression"
+        # → force split on inner Exercise headers
+        sub_blocks = re.split(
+            r"(?=\b(?:Exercise|Question|Problem)\s*\d{1,2}\b)", body, flags=re.IGNORECASE
+        )
+        for sub in sub_blocks:
+            sub = sub.strip()
+            if not sub:
+                continue
+
+            qas.append({
+                "question": f"{label}",
+                "answer": sub
+            })
+
+    # Deduplicate by trimming very small or repeated items
+    cleaned = []
+    seen = set()
+    for qa in qas:
+        a = qa["answer"].strip()
+        if len(a) < 20 or a in seen:
+            continue
+        seen.add(a)
+        cleaned.append(qa)
+
+    print(f"[split_into_qas] Parsed {len(cleaned)} QAs")
+    return cleaned
+
+# def robust_split_into_qas(text: str) -> dict:
+#     """
+#     Smart hybrid splitter:
+#     1. Try regex-based extraction first (split_into_qas).
+#     2. If result is shallow, label-only, or short, also call Groq AI parser (split_into_qas_ai).
+#     3. Merge both sources, keeping unique questions.
+#     Always returns {1: {"question":..., "answer":...}}.
+#     """
+#     import re
+#     qas = {}
+#     if not text or len(text.strip()) < 50:
+#         return qas
+
+#     # --- 1️⃣ Try regex first ---
+#     try:
+#         qas = split_into_qas(text)
+#     except Exception as e:
+#         print(f"[ERROR] Regex split failed: {e}")
+#         qas = {}
+
+#     # --- 2️⃣ Decide if we should invoke Groq AI ---
+#     needs_ai = False
+#     if len(qas) < 5 or all(len(v.get("question", "")) < 20 for v in qas.values()):
+#         needs_ai = True
+#     if sum(len(v.get("answer", "")) for v in qas.values()) < 200:
+#         needs_ai = True
+
+#     # --- 3️⃣ If needed, invoke AI ---
+#     ai_qas = {}
+#     if needs_ai:
+#         print("[INFO] Regex result looks shallow or label-only — invoking Groq AI parsing...")
+#         try:
+#             ai_qas = split_into_qas_ai(text)
+#         except Exception as e:
+#             print(f"[WARN] Groq AI call failed: {e}")
+#             ai_qas = {}
+
+#     # --- 4️⃣ Merge results if any AI output exists ---
+#     if ai_qas:
+#         print(f"[INFO] Merging Groq ({len(ai_qas)}) with regex ({len(qas)}) results...")
+#         # Add any Groq QA not already in regex
+#         for _, qa in ai_qas.items():
+#             found = any(
+#                 q.get("question", "").strip().lower() == qa.get("question", "").strip().lower()
+#                 for q in qas.values()
+#             )
+#             if not found:
+#                 qas[len(qas) + 1] = qa
+#     else:
+#         print("[INFO] No Groq output available; keeping regex result only.")
+
+#     print(f"[split_into_qas] Final parsed {len(qas)} QAs")
+#     return qas
+
+
+def _normalize_text(s):
+    s = s.lower()
+    s = re.sub(r'[^a-z0-9\s]', ' ', s)
+    s = re.sub(r'\s+', ' ', s).strip()
+    return s
+
+def _fuzzy_ratio(a, b):
+    return SequenceMatcher(None, a, b).ratio()
+
+def align_qas_hybrid(key_qas, ans_qas):
+    """
+    Aligns key and student QAs even if unordered, missing, or mismatched.
+    Uses fuzzy text similarity and keyword overlap.
+    """
+    aligned = {}
+    used = set()
+
+    for i, kqa in enumerate(key_qas, start=1):
+        kq_norm = _normalize_text(kqa.get("question", "") + " " + kqa.get("answer", ""))
+        best_idx, best_score = None, 0
+
+        for j, aqa in enumerate(ans_qas):
+            if j in used:
+                continue
+            aq_norm = _normalize_text(aqa.get("question", "") + " " + aqa.get("answer", ""))
+            score = _fuzzy_ratio(kq_norm, aq_norm)
+            # boost if they share key terms
+            key_terms = [w for w in kq_norm.split() if len(w) > 5]
+            overlap = sum(1 for w in key_terms if w in aq_norm)
+            score += overlap * 0.02
+            if score > best_score:
+                best_idx, best_score = j, score
+
+        aligned[i] = {
+            "question": kqa.get("question", ""),
+            "answer_key": kqa.get("answer", ""),
+            "answer_student": ans_qas[best_idx].get("answer", "") if best_idx is not None else "",
+            "confidence": round(best_score, 3)
+        }
+        if best_idx is not None:
+            used.add(best_idx)
+
+    print(f"[DEBUG] align_qas_hybrid matched {len(aligned)} pairs.")
+    return aligned
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Grading Pipeline (sync/async shared)
@@ -425,45 +699,90 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
         if not isinstance(s, str):
             return ""
         return (
-            s.replace("‘","'").replace("’","'")
+            s.replace("‘", "'").replace("’", "'")
              .replace("“", '"').replace("”", '"')
              .replace("\r", "").replace("\u00a0", " ")
         )
     key_text = _norm_quotes(_preprocess_exam_text(_sanitize_equations(key_text)))
     ans_text = _norm_quotes(_preprocess_exam_text(_sanitize_equations(ans_text)))
 
-    # 3) Split
+    def _clean_symbols(s: str) -> str:
+        return (
+            s.replace("<DOT>", ".")
+             .replace("≈", "=")
+             .replace("~", "")
+             .replace("=>", "=")
+             .replace("≤", "<=")
+             .replace("≥", ">=")
+        )
+
+    key_text = _clean_symbols(key_text)
+    ans_text = _clean_symbols(ans_text)
+
+    # 3) Split (Hybrid AI + Regex)
     try:
-        key_qas = split_into_qas(key_text)
-        ans_qas = split_into_qas(ans_text)
+        key_qas = robust_split_into_qas(key_text)
+        ans_qas = robust_split_into_qas(ans_text)
     except Exception as e:
-        print(f"[ERROR] split_into_qas failed: {e}")
-        key_qas, ans_qas = {}, {}
+        print(f"[ERROR] robust_split_into_qas failed: {e}")
+        key_qas, ans_qas = [], []
 
     if not key_qas:
         print("[ERROR] No questions parsed from key text.")
         return {}, 0, {}
 
-    # 4) Align (simple title similarity)
-    import difflib
-    aligned = {}
-    for q in key_qas:
-        kq = key_qas[q]["question"]
-        best_id, best_ratio = None, 0.0
-        for aq_id, aq in ans_qas.items():
-            r = difflib.SequenceMatcher(None, kq, aq["question"]).ratio()
-            if r > best_ratio:
-                best_ratio, best_id = r, aq_id
-        if best_id is not None:
-            aligned[q] = ans_qas[best_id]
-    ans_qas = aligned
-    print(f"[DEBUG] alignment → matched {len(ans_qas)} answers.")
+    print(f"[DEBUG] Parsed {len(key_qas)} key QAs, {len(ans_qas)} answer QAs")
 
-    # 5) Grade
+    # 4) Normalize text
+    def _normalize_question(s):
+        s = s.lower()
+        s = re.sub(r"[^a-z0-9\s]", " ", s)
+        s = re.sub(r"\s+", " ", s).strip()
+        return s
+
+    cleaned_key_qas = []
+    for i, qa in enumerate(key_qas):
+        qtext = qa.get("question", qa.get("answer", ""))
+        qa["question_norm"] = _normalize_question(qtext)
+        if qtext.strip():
+            cleaned_key_qas.append(qa)
+        else:
+            print(f"[WARN] key_qas[{i}] missing question text — skipping.")
+    key_qas = cleaned_key_qas
+
+    cleaned_ans_qas = []
+    for i, qa in enumerate(ans_qas):
+        qtext = qa.get("question", qa.get("answer", ""))
+        qa["question_norm"] = _normalize_question(qtext)
+        if qtext.strip():
+            cleaned_ans_qas.append(qa)
+        else:
+            print(f"[WARN] ans_qas[{i}] missing question text — skipping.")
+    ans_qas = cleaned_ans_qas
+
+    print(f"[DEBUG] key_qas count={len(key_qas)}, ans_qas count={len(ans_qas)}")
+
+    # Quick peek
+    for i, qa in enumerate(key_qas[:3]):
+        print(f"[KEY {i+1}] {qa.get('question', '')[:120]}")
+    for i, qa in enumerate(ans_qas[:3]):
+        print(f"[ANS {i+1}] {qa.get('question', '')[:120]}")
+
+    # 5) Simple alignment placeholder (until hybrid added)
+    aligned = {}
+    for idx, kqa in enumerate(key_qas, start=1):
+        aligned[idx] = {
+            "question": kqa.get("question", ""),
+            "answer_key": kqa.get("answer", ""),
+            "answer_student": ans_qas[idx - 1].get("answer", "") if idx - 1 < len(ans_qas) else "",
+        }
+    print(f"[DEBUG] alignment → matched {len(aligned)} answers.")
+
+    # 6) Grade
     results = {}
-    for q_num in sorted(key_qas.keys()):
-        rubric = key_qas[q_num].get("answer", "")
-        student = ans_qas.get(q_num, {}).get("answer", "")
+    for q_num, qa in enumerate(key_qas, start=1):
+        rubric = qa.get("answer", "")
+        student = aligned.get(q_num, {}).get("answer_student", "")
         try:
             graded = grade_submission(rubric, student, strictness)
         except Exception as e:
@@ -475,18 +794,19 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
             graded["feedback"] = json.dumps(graded["feedback"], indent=2)
 
         results[q_num] = {
-            "question": key_qas[q_num].get("question", ""),
+            "question": qa.get("question", ""),
             "correct_answer": rubric,
             "student_answer": student,
             "evaluation": graded.get("feedback", ""),
             "score": graded.get("score", 0) or 0,
         }
 
-    # 6) Average (0–10)
+    # 7) Average
     scores = [v["score"] for v in results.values() if isinstance(v["score"], (int, float))]
     avg = round(sum(scores) / len(scores), 2) if scores else 0
     print(f"[INFO] process_grading → avg={avg}")
     return results, avg, key_qas
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Weighting
@@ -755,7 +1075,7 @@ def logout():
 @app.route("/grade", methods=["GET"])
 @login_required
 def grade_form():
-    return render_template("grade_upload.html")
+    return redirect(url_for('dashboard'))
 
 @app.route("/grade", methods=["POST"])
 @login_required
@@ -1147,4 +1467,7 @@ with app.app_context():
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # Debug=True to preserve the detailed logs you requested
-    app.run(debug=True)
+    app.run(debug=False, use_reloader=False)
+
+from werkzeug.serving import WSGIRequestHandler
+WSGIRequestHandler.timeout = 300  # allow up to 5 minutes per request

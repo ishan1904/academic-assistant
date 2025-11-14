@@ -1,4 +1,4 @@
-{% if avg_score is not none %}
+<!-- {% if avg_score is not none %}
   
   <p><strong>Score:</strong> {{ average_display }} </p>
 {% endif %}
@@ -21,4 +21,60 @@
   {% endfor %}
   </tbody>
 </table>
+ -->
 
+ {% if avg_score is not none %}
+  <p><strong>Score:</strong> {{ average_display }}</p>
+{% endif %}
+
+<style>
+  /* Inline styling for readability */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 0.9rem;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f4f4f4;
+    text-align: left;
+  }
+  .text-pre {
+    white-space: pre-wrap;      /* keep line breaks from \n */
+    word-break: break-word;     /* wrap long words/equations */
+    font-family: "Consolas", "Courier New", monospace; /* keeps math aligned */
+  }
+  .eval-cell {
+    background: #fdfdfd;
+  }
+</style>
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Question</th>
+      <th>Correct Answer</th>
+      <th>Student Answer</th>
+      <th>Evaluation</th>
+      <th>Score</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for qnum, item in results|dictsort %}
+    <tr>
+      <td>{{ qnum }}</td>
+      <td class="text-pre">{{ item.question | safe | replace ('/n','</br>') }}</td>
+      <td class="text-pre">{{ item.correct_answer | safe | replace ('/n','</br>') }}</td>
+      <td class="text-pre">{{ item.student_answer | safe | replace ('/n','</br>') }}</td>
+      <td class="text-pre eval-cell">{{ item.evaluation | safe | replace ('/n','</br>') }}</td>
+      <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
