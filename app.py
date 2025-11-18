@@ -436,103 +436,32 @@ def split_into_qas(text: str) -> dict:
     print(f"[split_into_qas] Parsed {len(qas)} QAs")
     return {int(k): v for k, v in qas.items() if v.get("question") or v.get("answer")}
 
-##worked for grade_run
-# def split_into_qas(text: str) -> dict:
-#     """
-#     Universal Q–A / Exercise splitter:
-#     • Detects MCQ blocks with 'Answer:'
-#     • Detects numbered Q&A without labels (like 1. ... [answer] 2. ...)
-#     • Falls back to analytical/blank-line splitting
-#     """
-
-#     if not text or not isinstance(text, str):
-#         return {}
-
-#     # Normalize newlines and spaces
-#     text = text.replace("\r\n", "\n").replace("\r", "\n").replace("\u00a0", " ")
-#     text = re.sub(r"[ \t]+", " ", text).strip()
-
-#     qas = {}
-
-#     # ---- 1️ MCQ-style detection (has 'Answer:' at least twice) ----
-#     if text.count("Answer:") >= 2:
-#         pattern = (
-#             r"(?is)"  # ignore case, dot matches newlines
-#             r"(?:^|\n)"  # start of line or text
-#             r"(?:(?:^|\n)(?:Question|Exercise)?\s*(\d+)[\.\):])"  # capture header line and text
-#             r"(?:\n\s*[A-D]\)[^\n]*){1,5}"  # 1–5 options
-#             r"\s*Answer\s*[:\-]\s*[A-Da-d]"  # explicit Answer line
-#             r"(?=(?:\n\s*\d+\s*[.)]|Q\s*\d+|Question\s*\d+|\Z))"  # stop at next question or end
-#         )
-
-#         matches = re.findall(pattern, text)
-#         for i, block in enumerate(matches, 1):
-#             lines = block.strip().splitlines()
-#             title = lines[0].strip()
-#             content = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
-#             qas[i] = {"question": title, "answer": content}
-
-#     # ---- 2️ NEW: Detect unlabeled numeric questions (no 'Answer:' keyword) ----
-#     if not qas:
-#         pattern = (
-#             r"(?is)"
-#             r"(?:^|\n)"                              # Start of text or line
-#             r"(?:Q(?:uestion)?\s*)?(\d+)[.)]?\s*(.*?)"  # Capture question number + text
-#             r"(?:\n(?!\s*\d+[.)]))(.+?)(?=(?:\n\s*\d+[.)]|$))"  # Capture answer until next number
-#         )
-#         matches = re.findall(pattern, text)
-#         for i, m in enumerate(matches, 1):
-#             q_num, question, answer = m
-#             qas[int(q_num)] = {
-#                 "question": question.strip(),
-#                 "answer": answer.strip(),
-#             }
-
-#     # ---- 3️ Otherwise use analytical fallback ----
-#     if not qas:
-#         pattern = (
-#             r"(?is)"
-#             r"(?:^|\n)"
-#             r"((?:Exercise|Question|Problem|Task|Q|\()\s*\d+[A-Za-z]?[.:)\-–]?\s*.*?)"
-#             r"(?=(?:\n\s*(?:Exercise|Question|Problem|Task|Q|\()\s*\d+|\Z))"
-#         )
-#         matches = re.findall(pattern, text)
-#         for i, block in enumerate(matches, 1):
-#             lines = block.strip().splitlines()
-#             title = lines[0].strip()
-#             content = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
-#             qas[i] = {"question": title, "answer": content}
-
-#     # ---- 4️  Fallback: blank-line chunks ----
-#     if not qas:
-#         chunks = re.split(r"\n\s*\n", text)
-#         for i, chunk in enumerate(chunks, 1):
-#             chunk = chunk.strip()
-#             if len(chunk.split()) > 5:
-#                 qas[i] = {"question": chunk, "answer": ""}
-
-#     print(f"[split_into_qas] Parsed {len(qas)} QAs")
-#     return {int(k): v for k, v in qas.items()}
-
-def robust_split_into_qas(text):
+def regex_split_into_qas(text):
     """
     Smart regex + fallback parser that extracts ordered Q/A blocks.
     Detects 'Question', 'Exercise', 'Q1:', 'Dataset', 'Compute', 'Given', etc.
+    Also merges subparts (a), (b), (c) into each question’s answer.
     """
 
-    # 1. Normalize spacing and remove double newlines
+    # 1️⃣ Normalize spacing and line breaks
     text = re.sub(r"\r", "", text)
     text = re.sub(r"[ \t]+", " ", text)
     text = re.sub(r"\n{2,}", "\n", text).strip()
 
-    # 2. Main pattern — catches numbered sections or typical headers
+    # 2️⃣ Main pattern — catches numbered sections or headers
+
     pattern = re.compile(
-        r"(?:(?<=\n)|^)"
-        r"(?P<label>(?:Q(?:uestion)?|Exercise|Section|Problem)\s*\d{1,2}\s*[:.\-]?)"
-        r"(?P<body>.*?)(?=(?:\n(?:Q(?:uestion)?|Exercise|Section|Problem)\s*\d{1,2}\s*[:.\-]?|"
-        r"\n(?:Dataset|Given|Compute|Find|Task|Assignment)\b|$))",
-        flags=re.IGNORECASE | re.DOTALL
-    )
+    r"(?:(?<=\n)|(?<=\s)|^)"  # allow start of line OR inline space
+    r"(?P<label>(?:Q(?:uestion)?|Exercise|Section|Problem)\s*\d{1,2}\s*[:.\-]?)"
+    r"(?P<body>[\s\S]*?)(?=(?:\b(?:Q(?:uestion)?|Exercise|Section|Problem)\s*\d{1,2}\s*[:.\-]?|$))",
+    flags=re.IGNORECASE
+)
+
+
+
+    # --- Prevent early termination on subpart lines like a), b), etc.
+    text = re.sub(r'(\n[a-eA-E][\).])', r' <SUBPART>\1', text)
+
 
     qas = []
     matches = list(pattern.finditer(text))
@@ -545,22 +474,23 @@ def robust_split_into_qas(text):
         label = m.group("label").strip()
         body = m.group("body").strip()
 
-        # Sometimes PyPDF2 merges "Exercise 3: k-NN ... Exercise 4: Regression"
-        # → force split on inner Exercise headers
-        sub_blocks = re.split(
-            r"(?=\b(?:Exercise|Question|Problem)\s*\d{1,2}\b)", body, flags=re.IGNORECASE
-        )
-        for sub in sub_blocks:
-            sub = sub.strip()
-            if not sub:
-                continue
+    # Take the first non-empty line as the question detail
+        lines = [ln.strip() for ln in body.splitlines() if ln.strip()]
+        question_detail = lines[0] if lines else ""
+        full_question = f"{label} {question_detail}".strip()
 
-            qas.append({
-                "question": f"{label}",
-                "answer": sub
-            })
+        qas.append({
+            "question": full_question,
+            "answer": body
+        })
 
-    # Deduplicate by trimming very small or repeated items
+        print(f"[DEBUG] Parsed block: {label} | len={len(body)} | preview={body[:120]!r}")
+
+
+
+
+
+    # Deduplicate and drop very small noise entries
     cleaned = []
     seen = set()
     for qa in qas:
@@ -573,59 +503,50 @@ def robust_split_into_qas(text):
     print(f"[split_into_qas] Parsed {len(cleaned)} QAs")
     return cleaned
 
-# def robust_split_into_qas(text: str) -> dict:
-#     """
-#     Smart hybrid splitter:
-#     1. Try regex-based extraction first (split_into_qas).
-#     2. If result is shallow, label-only, or short, also call Groq AI parser (split_into_qas_ai).
-#     3. Merge both sources, keeping unique questions.
-#     Always returns {1: {"question":..., "answer":...}}.
-#     """
-#     import re
-#     qas = {}
-#     if not text or len(text.strip()) < 50:
-#         return qas
+def robust_split_into_qas(text):
+    """
+    Universal hybrid parser:
+    1. Try regex-based splitting first (structured exams)
+    2. If too few QAs → fall back to Groq AI-based parsing
+    3. If still shallow → use MCQ-style numbered parsing
+    """
+    import json, re
+    from grading_agent import extract_json_ai  # reuse Groq model for AI parsing
 
-#     # --- 1️⃣ Try regex first ---
-#     try:
-#         qas = split_into_qas(text)
-#     except Exception as e:
-#         print(f"[ERROR] Regex split failed: {e}")
-#         qas = {}
+    # --- 1. Primary regex parser (your current logic) ---
+    qas = regex_split_into_qas(text)
+    print(f"[split_into_qas] Primary regex found {len(qas)} blocks")
 
-#     # --- 2️⃣ Decide if we should invoke Groq AI ---
-#     needs_ai = False
-#     if len(qas) < 5 or all(len(v.get("question", "")) < 20 for v in qas.values()):
-#         needs_ai = True
-#     if sum(len(v.get("answer", "")) for v in qas.values()) < 200:
-#         needs_ai = True
+    # If looks like a descriptive / structured exam → stop here
+    if len(qas) >= 4:
+        return qas
 
-#     # --- 3️⃣ If needed, invoke AI ---
-#     ai_qas = {}
-#     if needs_ai:
-#         print("[INFO] Regex result looks shallow or label-only — invoking Groq AI parsing...")
-#         try:
-#             ai_qas = split_into_qas_ai(text)
-#         except Exception as e:
-#             print(f"[WARN] Groq AI call failed: {e}")
-#             ai_qas = {}
+    # --- 2. AI fallback (Groq structured parsing) ---
+    print("[split_into_qas] Regex too shallow — invoking Groq AI parsing...")
+    ai_result = extract_json_ai(text)
+    try:
+        if isinstance(ai_result, str):
+            ai_result = json.loads(ai_result)
+    except Exception:
+        ai_result = []
 
-#     # --- 4️⃣ Merge results if any AI output exists ---
-#     if ai_qas:
-#         print(f"[INFO] Merging Groq ({len(ai_qas)}) with regex ({len(qas)}) results...")
-#         # Add any Groq QA not already in regex
-#         for _, qa in ai_qas.items():
-#             found = any(
-#                 q.get("question", "").strip().lower() == qa.get("question", "").strip().lower()
-#                 for q in qas.values()
-#             )
-#             if not found:
-#                 qas[len(qas) + 1] = qa
-#     else:
-#         print("[INFO] No Groq output available; keeping regex result only.")
+    if isinstance(ai_result, list) and len(ai_result) >= len(qas):
+        print(f"[split_into_qas] Groq structured {len(ai_result)} question–answer pairs (AI).")
+        return ai_result
 
-#     print(f"[split_into_qas] Final parsed {len(qas)} QAs")
-#     return qas
+    # --- 3. MCQ-style fallback (simple numbered pattern) ---
+    print("[split_into_qas] Falling back to MCQ pattern parsing...")
+    mcq_pattern = re.compile(
+        r"(?:(?<=\n)|^)(\d{1,2}[.)])\s*(?P<q>.+?)(?=(?:\n\d{1,2}[.)]\s|$))",
+        flags=re.DOTALL
+    )
+    mcqs = []
+    for match in mcq_pattern.finditer(text):
+        question = match.group("q").strip()
+        if question:
+            mcqs.append({"question": question, "answer": ""})
+    print(f"[split_into_qas] MCQ parser found {len(mcqs)} numbered items.")
+    return mcqs
 
 
 def _normalize_text(s):
@@ -739,6 +660,10 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
         s = re.sub(r"[^a-z0-9\s]", " ", s)
         s = re.sub(r"\s+", " ", s).strip()
         return s
+    
+    print(f"[DEBUG] Sample key question: {key_qas[0]['question'][:200]}")
+    print(f"[DEBUG] Sample key answer: {key_qas[0]['answer'][:400]}")
+
 
     cleaned_key_qas = []
     for i, qa in enumerate(key_qas):
@@ -778,11 +703,27 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
         }
     print(f"[DEBUG] alignment → matched {len(aligned)} answers.")
 
-    # 6) Grade
     results = {}
-    for q_num, qa in enumerate(key_qas, start=1):
-        rubric = qa.get("answer", "")
-        student = aligned.get(q_num, {}).get("answer_student", "")
+
+# Normalize key_qas and ans_qas to indexed access
+    if isinstance(key_qas, dict):
+        key_items = list(key_qas.items())
+    else:
+        key_items = list(enumerate(key_qas, start=1))
+
+    if isinstance(ans_qas, dict):
+        ans_items = list(ans_qas.items())
+    else:
+        ans_items = list(enumerate(ans_qas, start=1))
+
+    print(f"[DEBUG] Grading {len(key_items)} questions | {len(ans_items)} student answers")
+
+
+    # Iterate safely over aligned indices
+    for idx, (knum, kqa) in enumerate(key_items, start=1):
+        rubric = kqa.get("answer", "")
+        student = ans_items[idx - 1][1].get("answer", "") if idx - 1 < len(ans_items) else ""
+
         try:
             graded = grade_submission(rubric, student, strictness)
         except Exception as e:
@@ -793,19 +734,27 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
         if isinstance(graded.get("feedback"), dict):
             graded["feedback"] = json.dumps(graded["feedback"], indent=2)
 
-        results[q_num] = {
-            "question": qa.get("question", ""),
-            "correct_answer": rubric,
-            "student_answer": student,
-            "evaluation": graded.get("feedback", ""),
-            "score": graded.get("score", 0) or 0,
+        results[idx] = {
+        "question": kqa.get("question", "") or f"Q{idx}",
+        "correct_answer": rubric or "[No answer key provided]",
+        "student_answer": student or "[No student response]",
+        "evaluation": graded.get("feedback", "") or "—",
+        "score": graded.get("score", 0) or 0,
         }
+
 
     # 7) Average
     scores = [v["score"] for v in results.values() if isinstance(v["score"], (int, float))]
-    avg = round(sum(scores) / len(scores), 2) if scores else 0
+    avg= round(sum(scores) / len(scores), 2) if scores else 0
     print(f"[INFO] process_grading → avg={avg}")
-    return results, avg, key_qas
+    total_possible = len(results) * 10  # 10 points each
+    obtained = sum(v["score"] for v in results.values() if isinstance(v["score"], (int, float)))
+    average_display = f"Total: {obtained:.2f} / {total_possible:.1f} points ({(obtained/total_possible)*100:.2f}%)" if total_possible else "0%"
+
+    print(f"[DEBUG] Final results count={len(results)} | keys={list(results.keys())}")
+
+
+    return results, average_display, key_qas
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1128,14 +1077,41 @@ def grade_run():
         # Ensure numeric order in template
         results = dict(sorted(results.items(), key=lambda kv: int(kv[0])))
 
-        template = "grade_result_fragment.html" if is_ajax else "grade_result.html"
-        return render_template(
-            template,
+        print(f"[DEBUG] Sending {len(results)} results to template")
+        for i, (k, v) in enumerate(results.items(), 1):
+            print(f"→ {i}: {v['question'][:60]} | score={v['score']}")
+
+        
+        # --- DEBUG WRITE BEFORE RETURN ---
+        html_output = render_template(
+            "grade_result.html" if not is_ajax else "grade_result_fragment.html",
             results=results,
             avg_score=avg_score,
             average_display=average_display,
             download_filename=out_name
         )
+
+        debug_path = os.path.join(app.config["OUTPUT_FOLDER"], "debug_render.html")
+        with open(debug_path, "w", encoding="utf-8") as f:
+            f.write(html_output)
+        print(f"[DEBUG] Rendered HTML written to {debug_path} ({len(html_output)} chars)")
+
+        # Now safely return the HTML
+        resp = make_response(html_output)
+        resp.headers["Content-Type"] = "text/html; charset=utf-8"
+        resp.headers["Content-Length"] = str(len(html_output.encode("utf-8")))
+        return resp
+
+
+
+        # template = "grade_result_fragment.html" if is_ajax else "grade_result.html"
+        # return render_template(
+        #     template,
+        #     results=results,
+        #     avg_score=avg_score,
+        #     average_display=average_display,
+        #     download_filename=out_name
+        # )
     finally:
         for p in [key_path, ans_path]:
             if os.path.exists(p):
@@ -1467,7 +1443,7 @@ with app.app_context():
 # ─────────────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     # Debug=True to preserve the detailed logs you requested
-    app.run(debug=False, use_reloader=False)
+    app.run(debug=True)
 
 from werkzeug.serving import WSGIRequestHandler
 WSGIRequestHandler.timeout = 300  # allow up to 5 minutes per request

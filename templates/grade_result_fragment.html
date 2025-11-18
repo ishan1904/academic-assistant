@@ -1,30 +1,5 @@
-<!-- {% if avg_score is not none %}
-  
-  <p><strong>Score:</strong> {{ average_display }} </p>
-{% endif %}
-<table style="width:100%; border-collapse:collapse;" border="1" cellpadding="6" cellspacing="0">
-  <thead>
-    <tr>
-      <th>#</th><th>Question</th><th>Correct Answer</th><th>Student Answer</th><th>Evaluation</th><th>Score</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for qnum, item in results|dictsort %}
-    <tr>
-      <td>{{ qnum }}</td>
-      <td style="white-space:pre-wrap">{{ item.question }}</td>
-      <td style="white-space:pre-wrap">{{ item.correct_answer }}</td>
-      <td style="white-space:pre-wrap">{{ item.student_answer }}</td>
-      <td style="white-space:pre-wrap">{{ item.evaluation }}</td>
-      <td>{{ item.score }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table>
- -->
-
- {% if avg_score is not none %}
-  <p><strong>Score:</strong> {{ average_display }}</p>
+{% if avg_score is not none %}
+  <p><strong>Score:</strong> {{ avg_score }}</p>
 {% endif %}
 
 <style>
@@ -54,6 +29,30 @@
   }
 </style>
 
+<!-- <table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Question</th>
+      <th>Correct Answer</th>
+      <th>Student Answer</th>
+      <th>Evaluation</th>
+      <th>Score</th>
+    </tr>
+  </thead>
+  <tbody>
+  {% for qnum, item in results.items() %}
+    <tr>
+      <td>{{ qnum }}</td>
+      <td class="text-pre">{{ item.question | safe | replace ('/n','</br>') }}</td>
+      <td class="text-pre">{{ item.correct_answer | safe | replace ('/n','</br>') }}</td>
+      <td class="text-pre">{{ item.student_answer | safe | replace ('/n','</br>') }}</td>
+      <td class="text-pre eval-cell">{{ item.evaluation | safe | replace ('/n','</br>') }}</td>
+      <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table> -->
 <table>
   <thead>
     <tr>
@@ -66,15 +65,16 @@
     </tr>
   </thead>
   <tbody>
-  {% for qnum, item in results|dictsort %}
-    <tr>
-      <td>{{ qnum }}</td>
-      <td class="text-pre">{{ item.question | safe | replace ('/n','</br>') }}</td>
-      <td class="text-pre">{{ item.correct_answer | safe | replace ('/n','</br>') }}</td>
-      <td class="text-pre">{{ item.student_answer | safe | replace ('/n','</br>') }}</td>
-      <td class="text-pre eval-cell">{{ item.evaluation | safe | replace ('/n','</br>') }}</td>
-      <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
-    </tr>
-  {% endfor %}
+    <p>Total questions rendered: {{ results|length }}</p>
+    {% for qnum, item in results.items() %}
+      <tr>
+        <td>{{ qnum }}</td>
+        <td class="text-pre">{{ item.question | e | replace('\n','<br>') | safe }}</td>
+        <td class="text-pre">{{ item.correct_answer | e | replace('\n','<br>') | safe }}</td>
+        <td class="text-pre">{{ item.student_answer | e | replace('\n','<br>') | safe }}</td>
+        <td class="text-pre eval-cell">{{ item.evaluation | e | replace('\n','<br>') | safe }}</td>
+        <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
+      </tr>
+    {% endfor %}
   </tbody>
 </table>

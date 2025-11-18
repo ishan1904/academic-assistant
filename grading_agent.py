@@ -122,6 +122,46 @@ def extract_json(text: str):
 #     except Exception as e:
 #         print(f"[extract_json] JSON parse failed: {e}\nRaw candidate: {candidate[:200]}")
 #         return None
+def extract_json_ai(text: str):
+    """
+    Uses the Groq LLaMA 3.1 model to extract structured Q/A pairs
+    when regex fails (used by robust_split_into_qas fallback).
+    """
+    from groq import Groq
+
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+
+    prompt = f"""
+    You are a strict JSON generator. Extract all distinct question–answer pairs
+    from the following exam text. Each object must contain:
+      - "question": the question text
+      - "answer": the full corresponding answer text
+    Output strictly as a JSON array, no commentary.
+
+    Exam text:
+    {text}
+    """
+
+    try:
+        completion = client.chat.completions.create(
+            model="llama-3.1-8b-instant",
+            messages=[
+                {"role": "system", "content": "You extract structured Q/A pairs in JSON."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.2,
+            max_tokens=2000,
+        )
+        result = completion.choices[0].message.content.strip()
+
+        # Try parsing once before returning
+        try:
+            return json.loads(result)
+        except Exception:
+            return result
+    except Exception as e:
+        print(f"[ERROR] extract_json_ai Groq call failed: {e}")
+        return []
 
 
 def normalize_score(score):
