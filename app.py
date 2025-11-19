@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 """
 UTA Research • Grading Agent (Single-File Flask App)
@@ -163,36 +162,8 @@ def allowed_file(filename):
     return "." in filename and filename.rsplit(".", 1)[1].lower() in {"pdf", "docx", "txt", "ppt", "pptx"}
 
 # ─────────────────────────────────────────────────────────────────────────────
-# PDF Extraction & OCR Utilities
+# PDF Extraction 
 # ─────────────────────────────────────────────────────────────────────────────
-def _normalize_ocr_layout(text: str) -> str:
-    if not text:
-        return ""
-    text = text.replace("\r", "").replace("\u00a0", " ")
-    text = re.sub(r"\s{2,}", " ", text)
-    # Line breaks before numbered headers like 1. / 2) / Exercise 3:
-    text = re.sub(r"(?<!^)(?=\s*(Exercise|Question|Q|#)?\s*\d+\s*[:.)])", "\n", text)
-    # Ensure key labels start new lines
-    text = re.sub(r"(?i)(?<=\b)(Correct\s*Answer|Student\s*Answer|Evaluation|Score)\s*[:\-]?", r"\n\1:", text)
-    text = re.sub(r"\n{3,}", "\n\n", text)
-    return text.strip()
-
-def _merge_math_fragments(text: str) -> str:
-    """Reduce false-new-question triggers from equations like 0.2088, 14), log2(...)."""
-    if not text:
-        return ""
-    lines, out, buf = text.split("\n"), [], ""
-    for line in lines:
-        if re.match(r"^\s*(\d{1,3}\)|\d+\.\d+|log\d|√|−|\+|=)", line):
-            buf += " " + line.strip()
-        else:
-            if buf:
-                out.append(buf.strip())
-                buf = ""
-            out.append(line.strip())
-    if buf:
-        out.append(buf.strip())
-    return "\n".join(out)
 
 def extract_text_from_pdf_auto(pdf_path: str) -> str:
     print(f"[INFO] extract_text_from_pdf_auto → {pdf_path}")
