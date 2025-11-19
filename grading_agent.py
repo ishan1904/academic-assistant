@@ -75,53 +75,6 @@ def extract_json(text: str):
     return result
 
 
-# def extract_json(text: str):
-#     """
-#     Ultra-robust JSON extractor for LLM outputs.
-#     Handles markdown fences, stray text before/after, unmatched braces,
-#     single quotes, and trailing commas.  Always returns a dict or None.
-#     """
-#     import json, re
-
-#     if not text or not isinstance(text, str):
-#         return None
-
-#     # --- 1️⃣ Normalize obvious noise ---
-#     cleaned = (
-#         text.replace("```json", "")
-#         .replace("```", "")
-#         .replace("**", "")
-#         .replace("\r", "")
-#         .strip()
-#     )
-
-#     # --- 2️⃣ Try to isolate the first JSON object ---
-#     # capture the longest balanced-looking {...} block
-#     match = re.search(r"\{[\s\S]*?\}", cleaned)
-#     if match:
-#         candidate = match.group(0)
-#     else:
-#         # if no braces at all, maybe the model returned key:value lines
-#         candidate = "{" + cleaned + "}"
-
-#     # --- 3️⃣ Basic repairs ---
-#     candidate = candidate.replace("\n", " ").replace("\ufeff", "")
-#     candidate = re.sub(r"(?<!\\)'", '"', candidate)      # single → double quotes
-#     candidate = re.sub(r",\s*([}\]])", r"\1", candidate) # remove trailing commas
-
-#     # If braces are unbalanced, patch them
-#     open_b, close_b = candidate.count("{"), candidate.count("}")
-#     if open_b > close_b:
-#         candidate += "}" * (open_b - close_b)
-#     elif close_b > open_b:
-#         candidate = "{" * (close_b - open_b) + candidate
-
-#     # --- 4️⃣ Parse or fall back safely ---
-#     try:
-#         return json.loads(candidate)
-#     except Exception as e:
-#         print(f"[extract_json] JSON parse failed: {e}\nRaw candidate: {candidate[:200]}")
-#         return None
 def extract_json_ai(text: str):
     """
     Uses the Groq LLaMA 3.1 model to extract structured Q/A pairs
