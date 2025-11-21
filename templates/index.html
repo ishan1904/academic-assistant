@@ -421,122 +421,68 @@
         <div id="grade-section" class="content-section">
             <h2>Grading (Key + Answer PDFs)</h2>
             <p>Upload a <strong>Key PDF</strong> and an <strong>Answer Sheet PDF</strong>. We’ll evaluate and show results below.</p>
-          
+
             <form id="gradeUploadForm" action="{{ url_for('grade_run') }}" method="POST" enctype="multipart/form-data">
-              <label>Key PDF:</label>
-              <input type="file" name="key_pdf" accept="application/pdf" required>
-          
-              <label>Answer Sheet PDF:</label>
-              <input type="file" name="answer_pdf" accept="application/pdf" required>
-          
-              <button type="submit">Run Evaluation</button>
-                <!-- 👇 new OCR/async button -->
-              <!-- <form action="{{ url_for('grade_async') }}" method="POST" enctype="multipart/form-data" style="display:inline;">
-                <input type="hidden" name="key_pdf" id="async_key_input">
-                <input type="hidden" name="ans_pdf" id="async_ans_input">
-                <button type="button" onclick="runAsyncGrade()">Run Evaluation with OCR (Async)</button>
-              </form> -->
+
+                <label>Key PDF:</label>
+                <input type="file" name="key_pdf" accept="application/pdf" required>
+
+                <label>Answer Sheet PDF:</label>
+                <input type="file" name="answer_pdf" accept="application/pdf" required>
+
+                <div class="button-group">
+                    <!-- Sync grading (fast, uses PyPDF extract only) -->
+                    <button type="submit">Run Sync Evaluation</button>
+
+                    <!-- Async OCR grading (Gemini OCR + Groq formatting + Groq grading) -->
+                    <button type="button" onclick="runAsyncGrade()">Run Evaluation with OCR (Async)</button>
+                </div>
             </form>
+
+    <!-- Results will be injected here -->
+    <div id="grade-results" class="final-output" style="display:none; margin-top:16px;"></div>
+</div>
+
           
             <!-- Results will be injected here -->
             <div id="grade-results" class="final-output" style="display:none; margin-top:16px;"></div>
           </div>
           
-          
 
-        <!-- Right Section -->
-        <div class="card">
-            <h2>AI Recommendations</h2>
-            {% if filtered_sections %}
-            <div class="final-output">
-                <h3>Course: {{ course_name }}</h3>
-                <h4>Professor: {{ professor_name }}</h4>
+            <!-- Error and Success Messages -->
+            {% if error %}
+            <div class="error">{{ error }}</div>
+            {% endif %}
 
-                {% for section in filtered_sections %}
-                <div class="section">
-                    <div class="section-title">{{ section.section|default(section.section_title, true) }}</div>
-                    <div class="section-description">
-                        <ol>
-                            {% if section.description %}
-                            {% if section.description|is_iterable and section.description is not string %}
-                            {% for desc in section.description %}
-                            <li>{{ desc }}</li>
-                            {% endfor %}
-                            {% else %}
-                            <li>{{ section.description }}</li>
-                            {% endif %}
-                            {% else %}
-                            <li>No description available.</li>
-                            {% endif %}
-                        </ol>
-                    </div>
-                    {% set examples = section.get('examples') or section.get('EXAMPLES') or section.get('recommendations') %}
-                    {% if examples %}
-                    <strong>Examples/Recommendations:</strong>
-                    <ul class="examples">
-                        {% for example in examples %}
-                        <li>{{ example }}</li>
-                        {% endfor %}
-                    </ul>
-                    {% endif %}
-                </div>
-                {% endfor %}
-
-                <!-- Download Button -->
-                {% if structured_filename or concepts_filename %}
-                <div class="button-group" style="margin-top: 20px;">
-                    {% if structured_filename %}
-                    <a href="/download/recommendations/{{ structured_filename }}" class="download-btn" download>
-                        Download Syllabus Recommendations
-                    </a>
-                    {% endif %}
-                    {% if concepts_filename %}
-                    <a href="/download/recommendations/{{ concepts_filename }}" class="download-btn" download>
-                        Download Core Concepts
-                    </a>
-                    {% endif %}
-                </div>
-                {% endif %}
-            </div>
-            {% else %}
-            <p>AI recommendations will appear after processing....</p>
+            {% if success %}
+            <div class="success">{{ success }}</div>
             {% endif %}
         </div>
 
-        <!-- Error and Success Messages -->
-        {% if error %}
-        <div class="error">{{ error }}</div>
-        {% endif %}
+        <!-- Recommendation Modal -->
+        <div id="recModal" class="modal">
+            <div class="modal-content">
+                <span class="close-btn" onclick="closeRecModal()">×</span>
+                <h2>Enter Recommender Details</h2>
+                <form id="recForm" method="POST" action="/upload" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="recommendation">
+                    <input type="hidden" name="ai_model" id="hidden_rec_ai_model">
+                    <input type="hidden" name="resume_file" id="hidden_resume_file">
 
-        {% if success %}
-        <div class="success">{{ success }}</div>
-        {% endif %}
-    </div>
+                    <label for="recommender_name">Recommender Name:</label>
+                    <input type="text" id="recommender_name" name="recommender_name" required>
 
-    <!-- Recommendation Modal -->
-    <div id="recModal" class="modal">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeRecModal()">×</span>
-            <h2>Enter Recommender Details</h2>
-            <form id="recForm" method="POST" action="/upload" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="recommendation">
-                <input type="hidden" name="ai_model" id="hidden_rec_ai_model">
-                <input type="hidden" name="resume_file" id="hidden_resume_file">
+                    <label for="position">Position:</label>
+                    <input type="text" id="position" name="position" required>
 
-                <label for="recommender_name">Recommender Name:</label>
-                <input type="text" id="recommender_name" name="recommender_name" required>
+                    <label for="email">Email:</label>
+                    <input type="email" id="email" name="email" required>
 
-                <label for="position">Position:</label>
-                <input type="text" id="position" name="position" required>
-
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
-
-                <button type="submit">Generate Letter</button>
-                <button type="button" onclick="closeRecModal()">Cancel</button>
-            </form>
+                    <button type="submit">Generate Letter</button>
+                    <button type="button" onclick="closeRecModal()">Cancel</button>
+                </form>
+            </div>
         </div>
-    </div>
 
     <!-- Questions Modal -->
     <div id="questionModal" class="modal" style="display: none;">
@@ -600,12 +546,20 @@
         function showSection(section) {
             const buttons = document.querySelectorAll('.option-btn');
             buttons.forEach(btn => btn.classList.remove('active'));
-            document.querySelector(`.option-btn[onclick*="showSection('${section}')"]`).classList.add('active');
+
+            const activeBtn = document.querySelector(`.option-btn[onclick*="showSection('${section}')"]`);
+            if (activeBtn) activeBtn.classList.add('active');
 
             const sections = document.querySelectorAll('.content-section');
             sections.forEach(s => s.classList.remove('active'));
-            document.getElementById(`${section}-section`).classList.add('active');
+
+            const target = document.getElementById(`${section}-section`);
+            if (target) target.classList.add('active');
+
+            // NEW: update right panel visibility
+            updateRightPanel(section);
         }
+
 
         // Initial load: show Syllabus section by default
         window.onload = function() {
@@ -863,11 +817,25 @@
         });
         })();
 
+        function updateRightPanel(section) {
+            const card = document.getElementById("ai-right-panel");
+
+            // Only show for these sections:
+            const visibleFor = ["syllabus", "chapter", "resume", "exam"];
+
+            if (visibleFor.includes(section)) {
+                card.style.display = "block";
+            } else {
+                card.style.display = "none";
+            }
+        }
+
+
 
 
 
     </script>
-    <script>
+    <!-- <script>
         async function runAsyncGrade() {
         const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
         const ansFile = document.querySelector('input[name="answer_pdf"]').files[0];
@@ -897,7 +865,58 @@
             document.body.innerHTML = html;
         }
     }
+    </script> -->
+    <script>
+    async function runAsyncGrade() {
+        const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
+        const ansFile = document.querySelector('input[name="answer_pdf"]').files[0];
+
+        if (!keyFile || !ansFile) {
+            alert("Please upload both the Key and Answer PDFs first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("key_pdf", keyFile);
+        formData.append("ans_pdf", ansFile);
+
+        showProcessing();
+
+        // 1. Submit async job
+        const res = await fetch("{{ url_for('grade_async') }}", {
+            method: "POST",
+            body: formData
+        });
+
+        const data = await res.json();
+        const task_id = data.task_id;
+
+        // 2. Poll server
+        const poll = setInterval(async () => {
+            const r = await fetch(`/status_json/${task_id}`);
+            const status = await r.json();
+
+            // Still processing
+            if (!status.done) {
+                console.log("Status:", status.status);
+                return;
+            }
+
+            // Done
+            clearInterval(poll);
+            hideProcessing();
+
+            const resultsEl = document.getElementById("grade-results");
+            resultsEl.style.display = "block";
+            resultsEl.innerHTML = status.html;
+
+        }, 2000);
+    }
+
     </script>
+
+
+
 
 </body>
 

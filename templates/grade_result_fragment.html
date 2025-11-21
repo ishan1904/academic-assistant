@@ -1,4 +1,4 @@
-{% if avg_score is not none %}
+<!-- {% if avg_score is not none %}
   <p><strong>Score:</strong> {{ avg_score }}</p>
 {% endif %}
 
@@ -28,31 +28,6 @@
     background: #fdfdfd;
   }
 </style>
-
-<!-- <table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>Question</th>
-      <th>Correct Answer</th>
-      <th>Student Answer</th>
-      <th>Evaluation</th>
-      <th>Score</th>
-    </tr>
-  </thead>
-  <tbody>
-  {% for qnum, item in results.items() %}
-    <tr>
-      <td>{{ qnum }}</td>
-      <td class="text-pre">{{ item.question | safe | replace ('/n','</br>') }}</td>
-      <td class="text-pre">{{ item.correct_answer | safe | replace ('/n','</br>') }}</td>
-      <td class="text-pre">{{ item.student_answer | safe | replace ('/n','</br>') }}</td>
-      <td class="text-pre eval-cell">{{ item.evaluation | safe | replace ('/n','</br>') }}</td>
-      <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
-    </tr>
-  {% endfor %}
-  </tbody>
-</table> -->
 <table>
   <thead>
     <tr>
@@ -74,6 +49,93 @@
         <td class="text-pre">{{ item.student_answer | e | replace('\n','<br>') | safe }}</td>
         <td class="text-pre eval-cell">{{ item.evaluation | e | replace('\n','<br>') | safe }}</td>
         <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
+      </tr>
+    {% endfor %}
+  </tbody>
+</table> -->
+{% if avg_score is not none %}
+  <p><strong>Score:</strong> {{ avg_score }}</p>
+{% endif %}
+
+<style>
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: "Segoe UI", sans-serif;
+    font-size: 0.9rem;
+  }
+  th, td {
+    border: 1px solid #ccc;
+    padding: 6px;
+    vertical-align: top;
+  }
+  th {
+    background-color: #f4f4f4;
+    text-align: left;
+  }
+  .eval-cell {
+    background: #fdfdfd;
+  }
+  ul.clean-list {
+    margin: 0;
+    padding-left: 18px;
+  }
+  ul.clean-list li {
+    margin-bottom: 4px;
+  }
+</style>
+
+{% macro bulletize(text) %}
+  {% if '\n' in text %}
+    <ul class="clean-list">
+      {% for line in text.split('\n') %}
+        {% if line.strip() %}
+          <li>{{ line }}</li>
+        {% endif %}
+      {% endfor %}
+    </ul>
+  {% else %}
+    {{ text }}
+  {% endif %}
+{% endmacro %}
+
+
+<table>
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Question</th>
+      <th>Correct Answer</th>
+      <th>Student Answer</th>
+      <th>Evaluation</th>
+      <th>Score</th>
+    </tr>
+  </thead>
+
+  <tbody>
+    {% for qnum, item in results.items() %}
+      <tr>
+        <td>{{ qnum }}</td>
+
+        <td class="eval-cell">
+          {{ bulletize(item.question | e) | safe }}
+        </td>
+
+        <td class="eval-cell">
+          {{ bulletize(item.correct_answer | e) | safe }}
+        </td>
+
+        <td class="eval-cell">
+          {{ bulletize(item.student_answer | e) | safe }}
+        </td>
+
+        <td class="eval-cell">
+          {{ bulletize(item.evaluation | e) | safe }}
+        </td>
+
+        <td style="text-align:center; font-weight:bold;">
+          {{ item.score }}
+        </td>
       </tr>
     {% endfor %}
   </tbody>

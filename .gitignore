@@ -47,6 +47,7 @@ desktop.ini
 *.pptx
 *.xlsx
 *.csv
+*.txt
 
 # Temporary generated files
 *.bak
@@ -59,6 +60,13 @@ desktop.ini
 build/
 dist/
 *.egg-info/
+
+#extras
+update_env.py
+check_key.py
+debug_env.py
+fix_index.py
+verify_ocr.py
 
 # ─────────────────────────────
 # Notes:

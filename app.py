@@ -55,6 +55,7 @@ import pytesseract
 from PIL import Image
 import fitz  # PyMuPDF
 import google.generativeai as genai
+from ocr_gemini import extract_text_with_gemini
 
 # OpenAI / Anthropic (for upload features like question generation)
 import openai
@@ -66,7 +67,7 @@ from dotenv import load_dotenv
 # ─────────────────────────────────────────────────────────────────────────────
 # App & Config
 # ─────────────────────────────────────────────────────────────────────────────
-load_dotenv()
+load_dotenv(override=True)
 
 import socket
 socket.setdefaulttimeout(180)  # 180 seconds global timeout
@@ -165,8 +166,12 @@ def allowed_file(filename):
 # PDF Extraction 
 # ─────────────────────────────────────────────────────────────────────────────
 
-def extract_text_from_pdf_auto(pdf_path: str) -> str:
-    print(f"[INFO] extract_text_from_pdf_auto → {pdf_path}")
+def extract_text_from_pdf_auto(pdf_path: str, force_ocr: bool = False) -> str:
+    print(f"[INFO] extract_text_from_pdf_auto → {pdf_path} (force_ocr={force_ocr})")
+    if force_ocr:
+        print("[INFO] Force OCR enabled. Bypassing PyPDF2.")
+        return extract_text_with_gemini(pdf_path)
+
     try:
         reader = PdfReader(pdf_path)
         plain = "".join([(p.extract_text() or "") for p in reader.pages]).strip()
@@ -181,7 +186,7 @@ def extract_text_from_pdf_auto(pdf_path: str) -> str:
 
     # Keep Gemini fallback, but it will run only if PyPDF2 returns NOTHING
     try:
-        model = genai.GenerativeModel("gemini-1.5-pro-latest")
+        model = genai.GenerativeModel("gemini-2.5-flash")
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
         response = model.generate_content(
@@ -458,9 +463,6 @@ def regex_split_into_qas(text):
         print(f"[DEBUG] Parsed block: {label} | len={len(body)} | preview={body[:120]!r}")
 
 
-
-
-
     # Deduplicate and drop very small noise entries
     cleaned = []
     seen = set()
@@ -473,6 +475,7 @@ def regex_split_into_qas(text):
 
     print(f"[split_into_qas] Parsed {len(cleaned)} QAs")
     return cleaned
+
 
 def robust_split_into_qas(text):
     """
@@ -569,12 +572,12 @@ def align_qas_hybrid(key_qas, ans_qas):
 # ─────────────────────────────────────────────────────────────────────────────
 # Grading Pipeline (sync/async shared)
 # ─────────────────────────────────────────────────────────────────────────────
-def process_grading(key_source, ans_source, from_text=False, strictness="normal"):
+def process_grading(key_source, ans_source, from_text=False, strictness="normal", force_ocr=False):
     """
     Unified grading pipeline used by both sync and async flows.
     Returns: (results_dict, avg_score, key_qas)
     """
-    print(f"[INFO] process_grading(strictness={strictness}, from_text={from_text})")
+    print(f"[INFO] process_grading(strictness={strictness}, from_text={from_text}, force_ocr={force_ocr})")
     from grading_agent import grade_submission
 
     # 1) Load text
@@ -582,7 +585,7 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
         key_text, ans_text = key_source, ans_source
     else:
         key_text = extract_text_from_pdf_auto(key_source)
-        ans_text = extract_text_from_pdf_auto(ans_source)
+        ans_text = extract_text_from_pdf_auto(ans_source, force_ocr=force_ocr)
 
     print(f"[DEBUG] key_text_len={len(key_text)} | ans_text_len={len(ans_text)}")
 
@@ -725,7 +728,7 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
     print(f"[DEBUG] Final results count={len(results)} | keys={list(results.keys())}")
 
 
-    return results, average_display, key_qas
+    return results, avg, key_qas
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -1022,10 +1025,13 @@ def grade_run():
     ans_path = os.path.join(app.config["TEMP_FOLDER"], ans_name)
     key_pdf.save(key_path); ans_pdf.save(ans_path)
 
+    # Check for force_ocr checkbox
+    force_ocr = "force_ocr" in request.form
+
     try:
         # Extract → Process → Grade
         key_text = extract_text_from_pdf_auto(key_path)
-        ans_text = extract_text_from_pdf_auto(ans_path)
+        ans_text = extract_text_from_pdf_auto(ans_path, force_ocr=force_ocr)
 
         results, avg_score, key_qas = process_grading(
             key_text, ans_text, from_text=True, strictness="normal"
@@ -1094,12 +1100,12 @@ def grade_run():
 # ─────────────────────────────────────────────────────────────────────────────
 TASKS = {}
 
-def _async_worker(task_id, key_path, ans_path, mode="normal"):
-    print(f"[INFO] async worker started: {task_id}")
+def _async_worker(task_id, key_path, ans_path, mode="normal", force_ocr=False):
+    print(f"[INFO] async worker started: {task_id} (force_ocr={force_ocr})")
     try:
         TASKS[task_id]["status"] = "Extracting text..."
         key_text = extract_text_from_pdf_auto(key_path)
-        ans_text = extract_text_from_pdf_auto(ans_path)
+        ans_text = extract_text_from_pdf_auto(ans_path, force_ocr=force_ocr)
 
         TASKS[task_id]["status"] = "Grading..."
         results, avg_score, key_qas = process_grading(key_text, ans_text, from_text=True, strictness=mode)
@@ -1137,10 +1143,49 @@ def grade_async():
     ans_path = os.path.join(app.config["TEMP_FOLDER"], f"{task_id}_ans.pdf")
     key_file.save(key_path); ans_file.save(ans_path)
 
-    TASKS[task_id] = {"status": "Starting...", "result": None}
-    threading.Thread(target=_async_worker, args=(task_id, key_path, ans_path, "normal"), daemon=True).start()
+    force_ocr = "force_ocr" in request.form
 
-    return redirect(url_for("task_status", task_id=task_id))
+    TASKS[task_id] = {"status": "Starting...", "result": None}
+    threading.Thread(target=_async_worker, args=(task_id, key_path, ans_path, "normal", force_ocr), daemon=True).start()
+
+    return jsonify({"task_id": task_id})
+
+
+@app.route("/status_json/<task_id>")
+@login_required
+def status_json(task_id):
+    task = TASKS.get(task_id)
+
+    if not task:
+        return {"error": "Task not found"}, 404
+
+    # Still running
+    if not str(task["status"]).startswith("Completed"):
+        return {
+            "status": task["status"],
+            "done": False
+        }
+
+    # Completed — safe parsing
+    status_text = str(task.get("status", ""))
+
+    avg_match = re.search(r"Avg Score ([0-9.]+)/10", status_text)
+    avg_score = avg_match.group(1) if avg_match else None
+
+    # Render the result fragment
+    html = render_template(
+        "grade_result_fragment.html",
+        results=task.get("result", {}),
+        avg_score=avg_score,
+        average_display=task.get("average_display"),
+    )
+
+    return {
+        "status": "done",
+        "done": True,
+        "html": html
+    }
+
 
 @app.route("/status/<task_id>")
 @login_required
