@@ -1,33 +1,34 @@
 <!-- {% if avg_score is not none %}
-  <p><strong>Score:</strong> {{ avg_score }}</p>
+<p><strong>Score:</strong> {{ avg_score }}</p>
 {% endif %}
 
 <style>
-  /* Inline styling for readability */
   table {
     width: 100%;
     border-collapse: collapse;
     font-family: "Segoe UI", sans-serif;
     font-size: 0.9rem;
   }
-  th, td {
+
+  th,
+  td {
     border: 1px solid #ccc;
     padding: 6px;
     vertical-align: top;
   }
+
   th {
     background-color: #f4f4f4;
     text-align: left;
   }
-  .text-pre {
-    white-space: pre-wrap;      /* keep line breaks from \n */
-    word-break: break-word;     /* wrap long words/equations */
-    font-family: "Consolas", "Courier New", monospace; /* keeps math aligned */
-  }
+
   .eval-cell {
     background: #fdfdfd;
+    white-space: pre-wrap;
+    /* Preserves newlines and wraps text */
   }
 </style>
+
 <table>
   <thead>
     <tr>
@@ -39,22 +40,30 @@
       <th>Score</th>
     </tr>
   </thead>
+
   <tbody>
-    <p>Total questions rendered: {{ results|length }}</p>
     {% for qnum, item in results.items() %}
-      <tr>
-        <td>{{ qnum }}</td>
-        <td class="text-pre">{{ item.question | e | replace('\n','<br>') | safe }}</td>
-        <td class="text-pre">{{ item.correct_answer | e | replace('\n','<br>') | safe }}</td>
-        <td class="text-pre">{{ item.student_answer | e | replace('\n','<br>') | safe }}</td>
-        <td class="text-pre eval-cell">{{ item.evaluation | e | replace('\n','<br>') | safe }}</td>
-        <td style="text-align:center; font-weight:bold;">{{ item.score }}</td>
-      </tr>
+    <tr>
+      <td>{{ qnum }}</td>
+
+      <td class="eval-cell">{{ item.question | e }}</td>
+
+      <td class="eval-cell">{{ item.correct_answer | e }}</td>
+
+      <td class="eval-cell">{{ item.student_answer | e }}</td>
+
+      <td class="eval-cell">{{ item.evaluation | e }}</td>
+
+      <td style="text-align:center; font-weight:bold;">
+        {{ item.score }}
+      </td>
+    </tr>
     {% endfor %}
   </tbody>
 </table> -->
+
 {% if avg_score is not none %}
-  <p><strong>Score:</strong> {{ avg_score }}</p>
+<p><strong>Score:</strong> {{ avg_score }}</p>
 {% endif %}
 
 <style>
@@ -64,41 +73,25 @@
     font-family: "Segoe UI", sans-serif;
     font-size: 0.9rem;
   }
-  th, td {
+
+  th,
+  td {
     border: 1px solid #ccc;
     padding: 6px;
     vertical-align: top;
   }
+
   th {
     background-color: #f4f4f4;
     text-align: left;
   }
+
   .eval-cell {
     background: #fdfdfd;
-  }
-  ul.clean-list {
-    margin: 0;
-    padding-left: 18px;
-  }
-  ul.clean-list li {
-    margin-bottom: 4px;
+    white-space: pre-wrap;
+    /* Preserves newlines and wraps text */
   }
 </style>
-
-{% macro bulletize(text) %}
-  {% if '\n' in text %}
-    <ul class="clean-list">
-      {% for line in text.split('\n') %}
-        {% if line.strip() %}
-          <li>{{ line }}</li>
-        {% endif %}
-      {% endfor %}
-    </ul>
-  {% else %}
-    {{ text }}
-  {% endif %}
-{% endmacro %}
-
 
 <table>
   <thead>
@@ -114,29 +107,21 @@
 
   <tbody>
     {% for qnum, item in results.items() %}
-      <tr>
-        <td>{{ qnum }}</td>
+    <tr>
+      <td>{{ qnum }}</td>
 
-        <td class="eval-cell">
-          {{ bulletize(item.question | e) | safe }}
-        </td>
+      <td class="eval-cell">{{ item.question | e }}</td>
 
-        <td class="eval-cell">
-          {{ bulletize(item.correct_answer | e) | safe }}
-        </td>
+      <td class="eval-cell">{{ item.correct_answer | e }}</td>
 
-        <td class="eval-cell">
-          {{ bulletize(item.student_answer | e) | safe }}
-        </td>
+      <td class="eval-cell">{{ item.student_answer | e }}</td>
 
-        <td class="eval-cell">
-          {{ bulletize(item.evaluation | e) | safe }}
-        </td>
+      <td class="eval-cell">{{ item.evaluation | e }}</td>
 
-        <td style="text-align:center; font-weight:bold;">
-          {{ item.score }}
-        </td>
-      </tr>
+      <td style="text-align:center; font-weight:bold;">
+        {{ item.score }}
+      </td>
+    </tr>
     {% endfor %}
   </tbody>
 </table>

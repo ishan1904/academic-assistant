@@ -411,6 +411,7 @@ def split_into_qas(text: str) -> dict:
 
     print(f"[split_into_qas] Parsed {len(qas)} QAs")
     return {int(k): v for k, v in qas.items() if v.get("question") or v.get("answer")}
+    
 
 def regex_split_into_qas(text):
     """
@@ -568,6 +569,235 @@ def align_qas_hybrid(key_qas, ans_qas):
     print(f"[DEBUG] align_qas_hybrid matched {len(aligned)} pairs.")
     return aligned
 
+import difflib
+
+# def cluster_student_answers(key_qas, ans_qas):
+#     """
+#     For each student QA snippet, find the best-matching key question
+#     and assign it there. No threshold – every snippet gets attached
+#     to some exercise.
+
+#     Works for:
+#     - Long worked problems with numbered substeps
+#     - MCQs or short numbered answers
+
+#     key_qas: list[{"question": str, "answer": str}] OR dict[int -> {...}]
+#     ans_qas: same idea
+
+#     Returns: dict[int -> combined answer text]
+#     """
+#     # Normalize keys to a simple list for similarity
+#     if isinstance(key_qas, dict):
+#         key_list = [key_qas[k] for k in sorted(key_qas.keys())]
+#     else:
+#         key_list = list(key_qas)
+
+#     if isinstance(ans_qas, dict):
+#         ans_list = [ans_qas[k] for k in sorted(ans_qas.keys())]
+#     else:
+#         ans_list = list(ans_qas)
+
+#     def norm(text: str) -> str:
+#         return " ".join((text or "").lower().split())
+
+#     key_norms = []
+#     for kqa in key_list:
+#         k_text = (kqa.get("question", "") + " " + kqa.get("answer", "")).strip()
+#         key_norms.append(norm(k_text))
+
+#     groups = {i + 1: [] for i in range(len(key_list))}
+
+#     for aqa in ans_list:
+#         q_part = (aqa.get("question") or "").strip()
+#         a_part = (aqa.get("answer") or "").strip()
+
+#         full_text = (q_part + " " + a_part).strip()
+#         if not full_text:
+#             continue
+
+#         a_norm = norm(full_text)
+
+#         best_idx, best_score = None, -1.0
+#         for i, k_norm in enumerate(key_norms, start=1):
+#             score = difflib.SequenceMatcher(None, k_norm, a_norm).ratio()
+#             if score > best_score:
+#                 best_idx, best_score = i, score
+
+#         if best_idx is not None:
+#             snippet_text = a_part or q_part
+#             if snippet_text:
+#                 groups[best_idx].append(snippet_text)
+
+#     combined = {}
+#     for idx, parts in groups.items():
+#         if parts:
+#             combined[idx] = "\n\n".join(parts).strip()
+
+#     print(
+#         "[DEBUG] cluster_student_answers → built answers for "
+#         f"{len(combined)} questions. "
+#         + " | ".join(f"Q{idx}: {len(txt)} chars" for idx, txt in combined.items())
+#     )
+#     return combined
+
+def normalize_key_qas(key_qas: dict) -> list:
+    """
+    Convert split_into_qas output into a consistent list of dicts:
+    {"qid": "Q1", "question": "...", "answer": "...", "meta": {...}}
+    """
+    items = []
+    if not key_qas:
+        return items
+
+    for i, qa in key_qas.items():
+        if isinstance(qa, dict):
+            qtext = qa.get("question", "") or ""
+            ans = qa.get("answer", "") or ""
+        else:
+            # worst-case fallback
+            qtext = str(qa)
+            ans = ""
+
+        items.append({
+            "qid": f"Q{i}",
+            "question": qtext,
+            "answer": ans,
+            "meta": {}
+        })
+    return items
+
+
+def build_key_anchors(qtext: str):
+    anchors = []
+    if not qtext:
+        return anchors
+    t = qtext.lower()
+
+    m = re.search(r'(?i)\bexercise\s*(\d+)\b', t)
+    if m:
+        n = m.group(1)
+        anchors += [
+            f"exercise {n}", f"exercise:{n}", f"exercise :{n}", f"exercise : {n}", f"exercise-{n}",
+            f"ex {n}", f"ex{n}"
+        ]
+
+    m = re.search(r'(?i)\bq(?:uestion)?\s*(\d+)\b', t)
+    if m:
+        n = m.group(1)
+        anchors += [f"q{n}", f"q {n}", f"question {n}"]
+
+    # normalize spacing variants
+    anchors = [re.sub(r"\s+", " ", a.strip().lower()) for a in anchors]
+    return list(dict.fromkeys(anchors))
+
+
+
+def split_by_exercise(full_text: str):
+    if not full_text:
+        return {}
+
+    t = full_text.replace("\r\n", "\n").replace("\r", "\n")
+
+    # tolerant heading: Exercise 2 / Exercise:2 / Exercise : 2 / Exercise-2
+    heading_pat = re.compile(r'(?im)^\s*(exercise)\s*[:\-]?\s*(\d+)\b.*$')
+
+    hits = [(m.start(), m.group(2)) for m in heading_pat.finditer(t)]
+    if not hits:
+        return {}
+
+    blocks = {}
+    for i, (start, num) in enumerate(hits):
+        end = hits[i + 1][0] if i + 1 < len(hits) else len(t)
+        chunk = t[start:end].strip()
+        blocks[f"exercise {num}"] = chunk
+
+    return blocks
+
+def split_by_numbered(full_text: str):
+    if not full_text:
+        return {}
+
+    t = full_text.replace("\r\n", "\n").replace("\r", "\n")
+
+    pat = re.compile(r'(?ms)^\s*(\d{1,2})\s*[\).\:]?\s+(.*?)(?=^\s*\d{1,2}\s*[\).\:]?\s+|$)')
+    blocks = {}
+    for m in pat.finditer(t):
+        num = int(m.group(1))
+        body = (m.group(2) or "").strip()
+
+        # filter obvious numeric junk / distance lines
+        if len(body) < 80:
+            continue
+        if re.match(r'(?i)^\s*d\d+\s*=', body):
+            continue
+
+        blocks[f"q{num}"] = body
+
+    return blocks
+
+
+def match_student_text(kqa, idx, student_blocks_ex, student_blocks_qa, student_blocks_num, full_student_text, key_count):
+    qtext = (kqa.get("question") or "").lower()
+    anchors = build_key_anchors(qtext)
+
+    # 1) Exercise anchor match
+    for a in anchors:
+        a_norm = re.sub(r"\s+", " ", a.strip().lower())
+        if a_norm in student_blocks_ex:
+            return student_blocks_ex[a_norm], "exercise-anchor"
+
+    # 2) Numbered Q/A match (best for "1. Question\nAnswer")
+    qid = f"q{idx}"
+    if qid in student_blocks_qa:
+        return student_blocks_qa[qid], "numbered-qa"
+
+    # 3) Numbered block match
+    if qid in student_blocks_num:
+        return student_blocks_num[qid], "numbered-block"
+
+    # 4) Final fallback
+    return full_student_text, "full-fallback"
+
+def split_numbered_qa_pairs(text: str) -> dict:
+    """
+    Robust splitter for:
+    - 1. A
+    - 1) Answer text
+    - Q1: B
+    - Q2 Ans: option C
+    """
+    if not text:
+        return {}
+
+    t = text.replace("\r\n", "\n").replace("\r", "\n")
+
+    pat = re.compile(
+        r"""
+        (?ms)
+        ^\s*
+        (?:Q\s*)?(\d{1,3})          # question number
+        \s*[\).\:]?\s*
+        (?:Ans(?:wer)?\s*[:\-]?\s*)?
+        (.*?)                       # answer
+        (?=^\s*(?:Q\s*)?\d{1,3}[\).\:]|\Z)
+        """,
+        re.VERBOSE | re.IGNORECASE
+    )
+
+    blocks = {}
+    for m in pat.finditer(t):
+        num = m.group(1)
+        ans = (m.group(2) or "").strip()
+
+        # filter junk
+        if not ans:
+            continue
+        if len(ans) <= 3 and ans.upper() in {"A", "B", "C", "D", "E"}:
+            blocks[f"q{num}"] = ans.upper()
+        else:
+            blocks[f"q{num}"] = ans
+
+    return blocks
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Grading Pipeline (sync/async shared)
@@ -616,105 +846,289 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
 
     # 3) Split (Hybrid AI + Regex)
     try:
-        key_qas = robust_split_into_qas(key_text)
-        ans_qas = robust_split_into_qas(ans_text)
+        key_qas_raw = robust_split_into_qas(key_text)
+        ans_qas_raw = robust_split_into_qas(ans_text)
     except Exception as e:
         print(f"[ERROR] robust_split_into_qas failed: {e}")
-        key_qas, ans_qas = [], []
+        key_qas_raw, ans_qas_raw = [], []
 
-    if not key_qas:
+    if not key_qas_raw:
         print("[ERROR] No questions parsed from key text.")
         return {}, 0, {}
 
-    print(f"[DEBUG] Parsed {len(key_qas)} key QAs, {len(ans_qas)} answer QAs")
+    print(f"[DEBUG] Parsed {len(key_qas_raw)} key QAs, {len(ans_qas_raw)} answer QAs")
 
-    # 4) Normalize text
+    # 4) Normalize text & Ensure List of Dicts
     def _normalize_question(s):
         s = s.lower()
         s = re.sub(r"[^a-z0-9\s]", " ", s)
         s = re.sub(r"\s+", " ", s).strip()
         return s
     
-    print(f"[DEBUG] Sample key question: {key_qas[0]['question'][:200]}")
-    print(f"[DEBUG] Sample key answer: {key_qas[0]['answer'][:400]}")
+    # Ensure key_qas is a list of dicts for processing
+    if isinstance(key_qas_raw, dict):
+        key_qas_list = [v for k, v in sorted(key_qas_raw.items(), key=lambda item: int(item[0]))]
+    elif isinstance(key_qas_raw, list):
+        key_qas_list = key_qas_raw
+    else:
+        key_qas_list = []
 
+    # Ensure ans_qas is a list of dicts for processing
+    if isinstance(ans_qas_raw, dict):
+        ans_qas_list = [v for k, v in sorted(ans_qas_raw.items(), key=lambda item: int(item[0]))]
+    elif isinstance(ans_qas_raw, list):
+        ans_qas_list = ans_qas_raw
+    else:
+        ans_qas_list = []
 
     cleaned_key_qas = []
-    for i, qa in enumerate(key_qas):
+    for i, qa in enumerate(key_qas_list):
         qtext = qa.get("question", qa.get("answer", ""))
         qa["question_norm"] = _normalize_question(qtext)
         if qtext.strip():
             cleaned_key_qas.append(qa)
         else:
             print(f"[WARN] key_qas[{i}] missing question text — skipping.")
-    key_qas = cleaned_key_qas
+    key_qas_list = cleaned_key_qas
 
     cleaned_ans_qas = []
-    for i, qa in enumerate(ans_qas):
+    for i, qa in enumerate(ans_qas_list):
         qtext = qa.get("question", qa.get("answer", ""))
         qa["question_norm"] = _normalize_question(qtext)
         if qtext.strip():
             cleaned_ans_qas.append(qa)
         else:
             print(f"[WARN] ans_qas[{i}] missing question text — skipping.")
-    ans_qas = cleaned_ans_qas
+    ans_qas_list = cleaned_ans_qas
 
-    print(f"[DEBUG] key_qas count={len(key_qas)}, ans_qas count={len(ans_qas)}")
+    print(f"[DEBUG] key_qas count={len(key_qas_list)}, ans_qas count={len(ans_qas_list)}")
+
+        # Build full student text from OCR
+    full_student_text = (ans_text or "").strip()
+    print(f"[DEBUG] full_student_text length={len(full_student_text)}")
+
+    student_blocks_ex = split_by_exercise(full_student_text)
+    student_blocks_num = split_by_numbered(full_student_text)
+    student_blocks_qa = split_numbered_qa_pairs(full_student_text)
+
+
+    print(f"[DEBUG] student_blocks_qa={len(student_blocks_qa)} keys={list(student_blocks_qa.keys())[:10]}")
+    print(f"[DEBUG] student_blocks_ex={len(student_blocks_ex)} | student_blocks_num={len(student_blocks_num)}")
+    full_student_text = (ans_text or "").strip()
+    print(f"[DEBUG] full_student_text length={len(full_student_text)}")
+
+    # --- Exercise blocks (normalized keys) ---
+    raw_student_blocks_ex = split_by_exercise(full_student_text)
+
+    student_blocks_ex = {
+        re.sub(r"\s+", " ", k.strip().lower()): v
+        for k, v in raw_student_blocks_ex.items()
+    }
+
+    # --- Numbered blocks (already normalized by construction) ---
+    student_blocks_num = split_by_numbered(full_student_text)
+
+    print(
+        f"[DEBUG] student_blocks_ex={len(student_blocks_ex)} "
+        f"keys={list(student_blocks_ex.keys())} | "
+        f"student_blocks_num={len(student_blocks_num)}"
+    )
+
+
+
+
 
     # Quick peek
-    for i, qa in enumerate(key_qas[:3]):
+    for i, qa in enumerate(key_qas_list[:3]):
         print(f"[KEY {i+1}] {qa.get('question', '')[:120]}")
-    for i, qa in enumerate(ans_qas[:3]):
+    for i, qa in enumerate(ans_qas_list[:3]):
         print(f"[ANS {i+1}] {qa.get('question', '')[:120]}")
 
-    # 5) Simple alignment placeholder (until hybrid added)
-    aligned = {}
-    for idx, kqa in enumerate(key_qas, start=1):
-        aligned[idx] = {
-            "question": kqa.get("question", ""),
-            "answer_key": kqa.get("answer", ""),
-            "answer_student": ans_qas[idx - 1].get("answer", "") if idx - 1 < len(ans_qas) else "",
-        }
-    print(f"[DEBUG] alignment → matched {len(aligned)} answers.")
+    # 5) Group student answers by closest exercise (fuzzy similarity)
+    # def cluster_student_answers(key_qas, ans_qas):
+    #     """
+    #     For each student QA snippet, find the best-matching key question
+    #     and assign it there. No threshold – every snippet gets attached
+    #     to some exercise.
 
+    #     Returns: {question_index: "combined student answer text"}
+    #     """
+    #     # Build normalized text for each key (question + rubric)
+    #     key_norms = []
+    #     for kqa in key_qas:
+    #         k_text = (kqa.get("question", "") + " " + kqa.get("answer", "")).strip()
+    #         key_norms.append(_normalize_text(k_text))
+
+    #     # Prepare buckets for each exercise index (1-based)
+    #     groups = {i + 1: [] for i in range(len(key_qas))}
+
+    #     for aqa in ans_qas:
+    #         # Combine question + answer text for similarity
+    #         q_part = aqa.get("question", "") or ""
+    #         a_part = aqa.get("answer", "") or ""
+    #         a_text = (q_part + " " + a_part).strip()
+    #         a_norm = _normalize_text(a_text)
+
+    #         best_idx, best_score = None, -1.0
+
+    #         # Find the most similar key
+    #         for i, k_norm in enumerate(key_norms, start=1):
+    #             score = _fuzzy_ratio(k_norm, a_norm)
+    #             if score > best_score:
+    #                 best_idx, best_score = i, score
+
+    #         if best_idx is not None:
+    #             # 👉 Store *actual snippet text*:
+    #             # if 'answer' is empty (MCQ parser), fall back to 'question'
+    #             snippet_text = a_part or q_part
+    #             if snippet_text:
+    #                 groups[best_idx].append(snippet_text)
+
+    #     # Join snippets for each exercise
+    #     combined = {}
+    #     for idx, parts in groups.items():
+    #         if parts:
+    #             combined[idx] = "\n\n".join(parts).strip()
+
+    #     print(
+    #         "[DEBUG] cluster_student_answers → built answers for "
+    #         f"{len(combined)} questions. "
+    #         + " | ".join(
+    #             f"Q{idx}: {len(text)} chars" for idx, text in combined.items()
+    #         )
+    #     )
+    #     return combined
+
+    # --- NEW: try to split the student text by Exercise headers ---
+    student_blocks = {}
+    matches = list(re.finditer(r'(?im)^\s*(exercise\s*\d+)\s*[:\-]?', ans_text))
+
+    if matches:
+        for i, m in enumerate(matches):
+            start = m.start()
+            end = matches[i+1].start() if i + 1 < len(matches) else len(ans_text)
+            key = m.group(1).strip().lower()  # like "exercise 1"
+            student_blocks[key] = ans_text[start:end].strip()
+
+    print(f"[DEBUG] student_blocks found={len(student_blocks)} keys={list(student_blocks.keys())[:5]}")
+
+
+    # --- NEW grading loop using full_student_text for every question ---
+
+    # results = {}
+
+    # key_items = list(enumerate(key_qas_list, start=1))
+    # print(f"[DEBUG] Grading {len(key_items)} questions with full student text")
+
+    # total_score = 0
+    # scored_count = 0
+
+    # MAX_CHARS = 2500
+    # key_count = len(key_items)
+
+    # for idx, kqa in key_items:
+    #     rubric = kqa.get("answer", "")
+
+    #     # --- Step 4: match best student chunk for this key question ---
+    #     student_for_grading, match_mode = match_student_text(
+    #         kqa=kqa,
+    #         idx=idx,
+    #         student_blocks_ex=student_blocks_ex,
+    #         student_blocks_num=student_blocks_num,
+    #         full_student_text=full_student_text,
+    #         key_count=key_count
+    #     )
+
+    #     # --- Step 5: UI shows matched block (trimmed) ---
+    #     student_for_display = (student_for_grading or "").strip()
+    #     if len(student_for_display) > MAX_CHARS:
+    #         student_for_display = student_for_display[:MAX_CHARS] + "…"
+
+    #     # --- Step 6: optional extra context for grading only ---
+    #     student_context = full_student_text[:1200]
+    #     student_input = f"[ANSWER BLOCK]\n{student_for_grading}\n\n[EXTRA CONTEXT]\n{student_context}"
+
+    #     graded = grade_submission(rubric, student_input, strictness)
+
+    #     score = graded.get("score", 0) or 0
+    #     total_score += score
+    #     scored_count += 1
+
+    #     # --- Step 7: no log spam (small debug only) ---
+    #     print(f"[DEBUG] Q{idx} match={match_mode} len={len(student_for_grading or '')} preview={(student_for_grading or '')[:200]!r}")
+
+    #     results[idx] = {
+    #         "question": kqa.get("question", "") or f"Q{idx}",
+    #         "correct_answer": rubric,
+    #         "student_answer": student_for_display or "[No matched answer detected]",
+    #         "evaluation": graded.get("feedback", ""),
+    #         "score": score,
+    #         "match_mode": match_mode,
+    #     }
     results = {}
 
-# Normalize key_qas and ans_qas to indexed access
-    if isinstance(key_qas, dict):
-        key_items = list(key_qas.items())
-    else:
-        key_items = list(enumerate(key_qas, start=1))
+    key_items = list(enumerate(key_qas_list, start=1))
+    key_count = len(key_items)
 
-    if isinstance(ans_qas, dict):
-        ans_items = list(ans_qas.items())
-    else:
-        ans_items = list(enumerate(ans_qas, start=1))
+    print(f"[DEBUG] Grading {key_count} questions with matched student blocks")
 
-    print(f"[DEBUG] Grading {len(key_items)} questions | {len(ans_items)} student answers")
+    total_score = 0
+    scored_count = 0
+    MAX_CHARS = 2500
 
+    # build blocks once (you already have full_student_text above)
+    student_blocks_ex = split_by_exercise(full_student_text)          # dict like {"exercise 1": "..."}
+    student_blocks_ex = {re.sub(r"\s+", " ", k.strip().lower()): v for k, v in student_blocks_ex.items()}
 
-    # Iterate safely over aligned indices
-    for idx, (knum, kqa) in enumerate(key_items, start=1):
+    student_blocks_qa = split_numbered_qa_pairs(full_student_text)    # dict like {"q1": "Paris", ...}
+    student_blocks_num = split_by_numbered(full_student_text)         # optional fallback
+
+    print(f"[DEBUG] student_blocks_ex={len(student_blocks_ex)} keys={list(student_blocks_ex.keys())}")
+    print(f"[DEBUG] student_blocks_qa={len(student_blocks_qa)} keys={list(student_blocks_qa.keys())}")
+    print(f"[DEBUG] student_blocks_num={len(student_blocks_num)} keys={list(student_blocks_num.keys())[:10]}")
+
+    for idx, kqa in key_items:
         rubric = kqa.get("answer", "")
-        student = ans_items[idx - 1][1].get("answer", "") if idx - 1 < len(ans_items) else ""
 
-        try:
-            graded = grade_submission(rubric, student, strictness)
-        except Exception as e:
-            graded = {"score": None, "feedback": f"Agent error: {e}"}
+        student_for_grading, match_mode = match_student_text(
+            kqa=kqa,
+            idx=idx,
+            student_blocks_ex=student_blocks_ex,
+            student_blocks_qa=student_blocks_qa,
+            student_blocks_num=student_blocks_num,
+            full_student_text=full_student_text,
+            key_count=key_count
+        )
 
-        if isinstance(graded, str):
-            graded = {"score": None, "feedback": graded}
-        if isinstance(graded.get("feedback"), dict):
-            graded["feedback"] = json.dumps(graded["feedback"], indent=2)
+        # UI shows what we matched (not the whole sheet)
+        student_for_display = (student_for_grading or "").strip()
+        if len(student_for_display) > MAX_CHARS:
+            student_for_display = student_for_display[:MAX_CHARS] + "…"
+
+        # grade with matched block + light context (works for messy formats)
+        student_context = full_student_text[:1200]
+        student_input = f"[ANSWER BLOCK]\n{student_for_grading}\n\n[EXTRA CONTEXT]\n{student_context}"
+
+        graded = grade_submission(rubric, student_input, strictness)
+
+        score = graded.get("score", 0) or 0
+        total_score += score
+        scored_count += 1
+
+        print(f"[DEBUG] Q{idx} match={match_mode} len={len(student_for_grading or '')} preview={(student_for_grading or '')[:200]!r}")
 
         results[idx] = {
-        "question": kqa.get("question", "") or f"Q{idx}",
-        "correct_answer": rubric or "[No answer key provided]",
-        "student_answer": student or "[No student response]",
-        "evaluation": graded.get("feedback", "") or "—",
-        "score": graded.get("score", 0) or 0,
+            "question": kqa.get("question", "") or f"Q{idx}",
+            "correct_answer": rubric,
+            "student_answer": student_for_display or "[No matched student block detected]",
+            "evaluation": graded.get("feedback", ""),
+            "score": score,
+            "match_mode": match_mode,
         }
+
+
+    avg = round(total_score / scored_count, 2) if scored_count else 0
+
 
 
     # 7) Average
@@ -727,9 +1141,10 @@ def process_grading(key_source, ans_source, from_text=False, strictness="normal"
 
     print(f"[DEBUG] Final results count={len(results)} | keys={list(results.keys())}")
 
+    # Ensure key_qas is a dict keyed by question number for weighting
+    key_qas_dict = {i + 1: qa for i, qa in enumerate(key_qas_list)}
 
-    return results, avg, key_qas
-
+    return results, avg, key_qas_dict
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Weighting
@@ -764,7 +1179,14 @@ def apply_dynamic_weights(results: dict, key_qas: dict):
     total_awarded = 0.0
     total_possible = 0.0
     for q_num, item in results.items():
-        key_text = f"{key_qas.get(q_num, {}).get('question', '')} {key_qas.get(q_num, {}).get('answer', '')}"
+        # Handle key_qas as list (from process_grading) or dict
+        if isinstance(key_qas, list):
+            idx = int(q_num) - 1
+            k_data = key_qas[idx] if 0 <= idx < len(key_qas) else {}
+        else:
+            k_data = key_qas.get(q_num, {})
+            
+        key_text = f"{k_data.get('question', '')} {k_data.get('answer', '')}"
         weight = extract_weight_from_text(key_text, QUESTION_WEIGHTS.get(q_num, DEFAULT_WEIGHT))
         score = float(item.get("score", 0) or 0)
         awarded = round((score / 10.0) * weight, 2)
