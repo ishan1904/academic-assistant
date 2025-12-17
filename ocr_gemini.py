@@ -51,9 +51,19 @@ def extract_text_with_gemini(pdf_path: str) -> str:
             img_bytes = pix.tobytes("png")
 
             # Gemini OCR Request
+            instruction = (
+                "You are an OCR engine. Transcribe the page EXACTLY as written.\n"
+                "Rules:\n"
+                "- Output ONLY the transcription.\n"
+                "- Do NOT explain, do NOT solve, do NOT verify, do NOT add notes.\n"
+                "- Preserve line breaks as best as possible.\n"
+                "- Keep math symbols, subscripts/superscripts if visible, and tables as text.\n"
+                "- If something is unclear, write [UNCLEAR] in that spot.\n"
+            )
+
             response = model.generate_content(
                 [
-                    "Extract EXACT text from this handwritten page. Do not summarize. Do not reorganize. Keep math symbols.",
+                    instruction,
                     {"mime_type": "image/png", "data": img_bytes},
                 ]
             )

@@ -431,11 +431,8 @@
                 <input type="file" name="answer_pdf" accept="application/pdf" required>
 
                 <div class="button-group">
-                    <!-- Sync grading (fast, uses PyPDF extract only) -->
-                    <button type="submit">Run Sync Evaluation</button>
-
                     <!-- Async OCR grading (Gemini OCR + Groq formatting + Groq grading) -->
-                    <button type="button" onclick="runAsyncGrade()">Run Evaluation with OCR (Async)</button>
+                    <button type="button" onclick="runAsyncGrade()"> Run Evaluation </button>
                 </div>
             </form>
 
@@ -835,37 +832,7 @@
 
 
     </script>
-    <!-- <script>
-        async function runAsyncGrade() {
-        const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
-        const ansFile = document.querySelector('input[name="answer_pdf"]').files[0];
-        if (!keyFile || !ansFile) {
-            alert("Please upload both the Key and Answer PDFs first.");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("key_pdf", keyFile);
-        formData.append("ans_pdf", ansFile);
-
-        // If you already have a spinner function, use it:
-        if (typeof showProcessing === "function") showProcessing();
-
-        const res = await fetch("{{ url_for('grade_async') }}", {
-            method: "POST",
-            body: formData
-        });
-
-        if (typeof hideProcessing === "function") hideProcessing();
-
-        if (res.redirected) {
-            window.location.href = res.url; // go to /status/<task_id>
-        } else {
-            const html = await res.text();
-            document.body.innerHTML = html;
-        }
-    }
-    </script> -->
+    
     <script>
     async function runAsyncGrade() {
         const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
