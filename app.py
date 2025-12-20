@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-
+Grading Agent (Flask)
 
 This app supports:
 - User auth (signup/login/logout) with a simple SQLite database
@@ -23,6 +23,7 @@ import uuid
 import traceback
 import threading
 import socket
+import time
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Dict, List, Tuple, Optional
@@ -96,8 +97,9 @@ if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
 
 # -----------------------------------------------------------------------------
-# Database (SQLite)
+# Database 
 # -----------------------------------------------------------------------------
+
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
@@ -105,6 +107,7 @@ if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -216,13 +219,46 @@ def _preprocess_exam_text(raw: str) -> str:
     """Normalize separators and add predictable breaks before headings."""
     if not raw:
         return ""
-    t = raw
+
+    # Normalize line endings
+    t = raw.replace("\r\n", "\n").replace("\r", "\n")
+
+    # Replace long dash separators
     t = re.sub(r"-{3,}", "\n", t)
+
+    # Remove common footer noise
     t = re.sub(r"(?i)End of (Answer Key|simulated student answers).*", "", t)
+
+    # ---- CRITICAL CLEANUP (prevents phantom questions) ----
+
+    # Remove Gemini / OCR preamble text
+    t = re.sub(r"(?is)^Here is the extracted visible text.*?\n", "", t).strip()
+
+    # Remove standalone page markers like "**Page 6:**" or "Page 6:"
+    t = re.sub(r"(?im)^\s*\*{0,2}\s*Page\s*\d+\s*:\s*\*{0,2}\s*$", "", t)
+
+    # Remove inline page markers that appear mid-line
+    t = re.sub(r"\*{0,2}\s*Page\s*\d+\s*:\s*\*{0,2}", " ", t)
+
+    # Also remove bare "Page 6" lines (OCR variant)
+    t = re.sub(r"(?im)^\s*\*{0,2}\s*Page\s*\d+\s*\*{0,2}\s*$", "", t)
+
+    # ---- FORCE BREAKS BEFORE QUESTION MARKERS (PDF merge fix) ----
+    # Example: "Paris 2. Define photosynthesis" -> "Paris\n2. Define photosynthesis"
+    # Safe because decimals are protected earlier by _sanitize_equations()
+    t = re.sub(r"(?<!\n)(?<=\S)\s+(\d{1,3})\s*[\.\)]\s+", r"\n\1. ", t)
+
+    # Break before "Exercise N", "Question N", "Q N"
     t = re.sub(r"(?i)(?=\bExercise\s*\d+\b)", "\n", t)
     t = re.sub(r"(?i)(?=\bQuestion\s*\d+\b)", "\n", t)
+    t = re.sub(r"(?i)(?=\bQ\s*\d+\b)", "\n", t)
+
+    # Normalize blank lines
     t = re.sub(r"\n{3,}", "\n\n", t)
+
     return t.strip()
+
+
 
 
 def _clean_symbols(text: str) -> str:
@@ -236,6 +272,24 @@ def _clean_symbols(text: str) -> str:
         .replace("≥", ">=")
     )
 
+def _split_by_named_headers(t: str) -> List[Dict[str, str]]:
+    """
+    Split by Exercise/Question/Q headers only.
+    Prevents splitting inside solution steps (1., 2., tables, etc.)
+    """
+    header = r"(?:Exercise|Question|Problem|Task|Q)\s*\(?\s*\d+[A-Za-z]?\s*\)?\s*[:\.\)\-–]?"
+    pat = re.compile(
+        rf"(?:(?<=\n)|^)\s*((?:{header})\s*.*?)(?=(?:\n\s*(?:{header})\s|\Z))",
+        flags=re.IGNORECASE | re.DOTALL,
+    )
+    matches = pat.findall(t)
+    out: List[Dict[str, str]] = []
+    for block in matches:
+        lines = [ln.strip() for ln in block.strip().splitlines() if ln.strip()]
+        title = lines[0] if lines else ""
+        body = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
+        out.append({"question": title, "answer": body})
+    return out
 
 def split_by_exercise(full_text: str) -> Dict[str, str]:
     """Split on headings like 'Exercise 1', returning {'exercise 1': '...'} blocks."""
@@ -315,46 +369,123 @@ def build_key_anchors(question_text: str) -> List[str]:
 
 
 def match_student_text(
-    key_question: Dict[str, Any],
+    *,
+    key_question: Dict[str, str],
     q_index: int,
     student_blocks_ex: Dict[str, str],
-    student_blocks_qa: Dict[str, str],
+    student_blocks_qa: Dict[int, str],
     full_student_text: str,
 ) -> Tuple[str, str]:
     """
-    Choose the best student snippet to grade for this question.
+    Match student text to a key question.
 
-    Priority:
-    1) Match by explicit “Exercise N” anchors in the key
-    2) If key mentions Exercise N, try qN (NOT q_index)
-    3) Fallback to q_index only if we have no better clue
-    4) Full fallback
+    Returns:
+        (student_text_for_grading, match_mode)
+
+    match_mode ∈ {
+        "exercise-anchor",
+        "numbered-qa-num",
+        "numbered-qa-index",
+        "full-fallback",
+        "no-match"
+    }
     """
-    qtext = (key_question.get("question") or "")
-    qtext_l = qtext.lower()
 
-    # 1) Exercise anchor match (best)
-    anchors = build_key_anchors(qtext)
-    for a in anchors:
-        if a in student_blocks_ex:
-            return student_blocks_ex[a], "exercise-anchor"
+    question_title = (key_question.get("question") or "").strip()
 
-    # 2) If the key explicitly says "Exercise N", use that N to match qN
-    m = re.search(r"(?i)\bexercise\s*[:\-]?\s*(\d+)\b", qtext_l)
+    # ✅ detect "real question"
+    is_real_question = bool(
+        re.search(r"(?i)\b(exercise|question|problem|task|q)\b", question_title)
+        or "?" in question_title
+    )
+
+    # ------------------------------------------------------------
+    # 1) Exercise-based matching (Exercise 1, Exercise 2, etc.)
+    # ------------------------------------------------------------
+    m = re.search(r"(?i)\bexercise\s*(\d+)\b", question_title)
     if m:
-        ex_num = m.group(1)
-        qid = f"q{ex_num}"
-        if qid in student_blocks_qa:
-            return student_blocks_qa[qid], "numbered-qa-ex"
+        ex_key = f"exercise {m.group(1)}".lower()
+        ex_key = re.sub(r"\s+", " ", ex_key)
+        if ex_key in student_blocks_ex:
+            return student_blocks_ex[ex_key], "exercise-anchor"
 
-    # 3) Only now fall back to index mapping
-    qid = f"q{q_index}"
-    if qid in student_blocks_qa:
-        return student_blocks_qa[qid], "numbered-qa-index"
+    # ------------------------------------------------------------
+    # 2) Numbered matching by actual number in the KEY title (best for MCQs)
+    #    e.g. "12. Which..." or "12) Which..."
+    # ------------------------------------------------------------
+    mnum = re.match(r"^\s*(\d{1,3})\s*[\.\)]\s+", question_title)
+    if mnum:
+        qnum = int(mnum.group(1))
+        if qnum in student_blocks_qa:
+            return student_blocks_qa[qnum], "numbered-qa-num"
 
-    return full_student_text, "full-fallback"
+    # ------------------------------------------------------------
+    # 3) Numbered matching by enumerate index (fallback)
+    # ------------------------------------------------------------
+    if q_index in student_blocks_qa:
+        return student_blocks_qa[q_index], "numbered-qa-index"
+
+    # ------------------------------------------------------------
+    # 4) Full fallback (ONLY when it makes sense)
+    #    - For MCQ / multi-question numbered tests, full-fallback is harmful
+    #      because it repeats the whole paper for every question.
+    # ------------------------------------------------------------
+    multi_question_numbered_test = (len(student_blocks_qa) >= 2)
+
+    if is_real_question and full_student_text.strip() and not multi_question_numbered_test:
+        return full_student_text, "full-fallback"
+
+    return "", "no-match"
 
 
+
+
+def _fallback_split_numbered_blocks(t: str) -> List[Dict[str, str]]:
+    """
+    Stricter split for text like:
+      1. What is ...?
+         Paris
+      2) Define ...
+         ...
+    This is meant to rescue small tests/MCQs that otherwise collapse into 1 block.
+    """
+    if not t:
+        return []
+
+    pat = re.compile(r"(?ms)^\s*(\d{1,3})\s*[\.\)]\s+(.*?)(?=^\s*\d{1,3}\s*[\.\)]\s+|\Z)")
+    out: List[Dict[str, str]] = []
+
+    for m in pat.finditer(t):
+        qnum = m.group(1)
+        block = (m.group(2) or "").strip()
+        if not block:
+            continue
+
+        # First line is usually question text; remaining is "answer-ish" (or options)
+        lines = [ln.strip() for ln in block.splitlines() if ln.strip()]
+        title = f"{qnum}. {lines[0]}" if lines else f"{qnum}."
+        body = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
+
+        # ✅ ADD THIS BLOCK RIGHT HERE (before out.append)
+        block_text = (title + " " + body).strip()
+        word_count = len(re.findall(r"\w+", block_text))
+
+        looks_like_question = ("?" in title) or ("?" in block_text) or re.search(
+            r"(?i)\b(answer|ans|option|choose|select|which)\b", block_text
+        )
+        looks_like_mcq = bool(re.search(r"(?im)^\s*[A-D]\)\s+", body)) or bool(re.search(r"(?im)^\s*[A-D]\.\s+", body))
+
+        # Reject very tiny junk fragments unless they're MCQ-ish
+        if word_count < 6 and not looks_like_mcq:
+            continue
+
+        # Reject numbered table rows / calculation steps (common in big original test)
+        if not looks_like_question and not looks_like_mcq:
+            continue
+
+        out.append({"question": title, "answer": body})
+
+    return out
 
 
 # -----------------------------------------------------------------------------
@@ -362,13 +493,12 @@ def match_student_text(
 # -----------------------------------------------------------------------------
 def robust_split_into_qas(text: str) -> List[Dict[str, str]]:
     """
-    Primary splitter used for both key and student sheets.
+    Split exam text into Q/A blocks.
 
-    It tries to find blocks like:
-      Exercise 1: ...
-      Question 2 - ...
-
-    If it can't find anything useful, it falls back to a coarse chunk split.
+    Priority:
+    1) If Exercise/Question/Q headers exist (>=2), split ONLY by those.
+       (Prevents step-by-step numbered lines inside answers becoming fake questions.)
+    2) Otherwise, allow numbered question splitting (1., 2), etc.) for small tests/MCQs.
     """
     if not text:
         return []
@@ -377,13 +507,22 @@ def robust_split_into_qas(text: str) -> List[Dict[str, str]]:
     t = re.sub(r"[ \t]+", " ", t)
     t = re.sub(r"\n{3,}", "\n\n", t).strip()
 
+    # ✅ FIRST: try splitting by named headers only
+    named_blocks = _split_by_named_headers(t)
+    if len(named_blocks) >= 2:
+        return named_blocks
+
+    # ---- SECOND: allow numbered questions when named headers are not present ----
+    header = r"(?:Exercise|Question|Problem|Task|Q)\s*\d+[A-Za-z]?[\.:)\-–]?"
+    numbered = r"\d{1,3}\s*[\.\)]"
+
     pattern = re.compile(
-        r"(?:(?<=\n)|^)\s*((?:Exercise|Question|Problem|Task|Q)\s*\d+[A-Za-z]?[\.:)\-–]?\s*.*?)"
-        r"(?=(?:\n\s*(?:Exercise|Question|Problem|Task|Q)\s*\d+|\Z))",
+        rf"(?:(?<=\n)|^)\s*((?:{header}|{numbered})\s*.*?)(?=(?:\n\s*(?:{header}|{numbered})\s|\Z))",
         flags=re.IGNORECASE | re.DOTALL,
     )
 
     matches = pattern.findall(t)
+
     if matches:
         out: List[Dict[str, str]] = []
         for block in matches:
@@ -391,12 +530,146 @@ def robust_split_into_qas(text: str) -> List[Dict[str, str]]:
             title = lines[0] if lines else ""
             body = "\n".join(lines[1:]).strip() if len(lines) > 1 else ""
             out.append({"question": title, "answer": body})
+
+        # Rescue case for pure numbered small tests (3Q / MCQ)
+        if len(out) == 1:
+            n_hits = len(re.findall(r"(?m)^\s*\d{1,3}\s*[\.\)]\s+", t))
+            if n_hits >= 2:
+                strict = _fallback_split_numbered_blocks(t)
+                if len(strict) >= 2:
+                    return strict
+
         return out
 
-    # last-resort fallback: paragraph chunks
+    # Last resort fallback: paragraph chunks
     chunks = [c.strip() for c in re.split(r"\n\s*\n", t) if len(c.strip().split()) > 5]
     return [{"question": c, "answer": ""} for c in chunks]
 
+def build_student_numbered_index(full_student_text: str) -> Dict[int, str]:
+    """
+    Build a robust {question_number: block_text} index from the student's text.
+
+    Uses split_numbered_qa_pairs first (your existing method), but if that fails
+    (common with PDFs/MCQs), falls back to _fallback_split_numbered_blocks which
+    is stricter and works well for MCQs.
+    """
+    if not full_student_text:
+        return {}
+
+    # Primary (your existing splitter)
+    try:
+        primary = split_numbered_qa_pairs(full_student_text) or {}
+    except Exception:
+        primary = {}
+
+    # If primary seems OK, return it
+    if isinstance(primary, dict) and len(primary) >= 2:
+        # ensure keys are ints
+        fixed: Dict[int, str] = {}
+        for k, v in primary.items():
+            try:
+                fixed[int(k)] = v
+            except Exception:
+                pass
+        if len(fixed) >= 2:
+            return fixed
+
+    # Fallback: strict numbered block splitter
+    strict_blocks = _fallback_split_numbered_blocks(full_student_text)
+    out: Dict[int, str] = {}
+
+    for b in strict_blocks:
+        qtitle = (b.get("question") or "").strip()
+        body = (b.get("answer") or "").strip()
+
+        m = re.match(r"^\s*(\d{1,3})\s*[\.\)]", qtitle)
+        if not m:
+            continue
+        qnum = int(m.group(1))
+
+        # Keep full block for grading (question + options + answer line if present)
+        combined = qtitle
+        if body:
+            combined = combined + "\n" + body
+
+        out[qnum] = combined.strip()
+
+    return out
+
+def _extract_mcq_letter(text: str) -> str:
+    """
+    Extract answer choice letter from text.
+    Supports: 'Answer: B', 'Ans - B', 'Correct: C', '(B)', 'B)' etc.
+    """
+    if not text:
+        return ""
+
+    t = text.strip()
+
+    # Strong patterns first
+    m = re.search(r"(?i)\b(?:answer|ans|correct)\s*[:=\-]\s*([A-D])\b", t)
+    if m:
+        return m.group(1).upper()
+
+    # Standalone "Answer B" (no colon)
+    m = re.search(r"(?i)\b(?:answer|ans|correct)\s+([A-D])\b", t)
+    if m:
+        return m.group(1).upper()
+
+    # Last resort: find a single letter on its own line
+    m = re.search(r"(?m)^\s*([A-D])\s*$", t)
+    if m:
+        return m.group(1).upper()
+
+    return ""
+
+
+def _is_mcq_block(rubric: str) -> bool:
+    """
+    Heuristic: if the key contains options A) B) C) and an answer letter.
+    """
+    if not rubric:
+        return False
+    has_options = bool(re.search(r"(?m)^\s*A\)\s+.+\n\s*B\)\s+.+\n\s*C\)\s+.+", rubric))
+    has_answer = bool(re.search(r"(?i)\b(?:answer|ans|correct)\s*[:=\-]\s*[A-D]\b", rubric))
+    return has_options and has_answer
+
+def build_student_sequential_blocks(full_student_text: str) -> Dict[int, str]:
+    """
+    Fallback splitter when the student didn't number answers (common in small tests).
+    Splits into paragraph-like blocks and assigns 1..N.
+    """
+    if not full_student_text:
+        return {}
+
+    t = full_student_text.replace("\r\n", "\n").replace("\r", "\n").strip()
+    if not t:
+        return {}
+
+    # Split on blank lines first
+    chunks = [c.strip() for c in re.split(r"\n\s*\n+", t) if c.strip()]
+
+    # If still only one chunk, try splitting on lines that look like standalone short answers
+    if len(chunks) <= 1:
+        lines = [ln.strip() for ln in t.splitlines() if ln.strip()]
+        # group lines into blocks; new block when line looks like a new Q marker OR long question sentence
+        chunks = []
+        buf = []
+        for ln in lines:
+            if re.match(r"^\d{1,3}[\.\)]\s+", ln):
+                if buf:
+                    chunks.append("\n".join(buf).strip())
+                    buf = []
+                buf.append(ln)
+            else:
+                buf.append(ln)
+        if buf:
+            chunks.append("\n".join(buf).strip())
+
+    out: Dict[int, str] = {}
+    for i, c in enumerate(chunks, start=1):
+        out[i] = c
+    return out
 
 def process_grading(
     key_source: str,
@@ -408,14 +681,17 @@ def process_grading(
 ) -> Tuple[Dict[int, Dict[str, Any]], float, Dict[int, Dict[str, str]]]:
     """
     Main grading pipeline.
+
     Returns:
       results: {1: {...}, 2: {...}}
       avg_score (0-10 scale)
       key_qas_dict: {1: {"question":..., "answer":...}, ...} used for weighting
     """
-    from grading_agent import grade_submission  # your Groq-based grader
+    from grading_agent import grade_submission  # Groq-based grader
 
+    # ---------------------------------------------------------
     # 1) Load and preprocess text
+    # ---------------------------------------------------------
     if from_text:
         key_text, ans_text = key_source, ans_source
     else:
@@ -428,21 +704,50 @@ def process_grading(
     if not key_text.strip():
         return {}, 0.0, {}
 
-    # 2) Parse Q/A blocks
+    # ---------------------------------------------------------
+    # 2) Parse Q/A blocks from KEY
+    # ---------------------------------------------------------
     key_qas_list = robust_split_into_qas(key_text)
+
+    # ✅ If the key clearly uses Exercise/Question headers, lock to those only.
+    # Prevents numbered "steps" inside solutions from becoming fake questions.
+    header_hits = len(
+        re.findall(r"(?i)\b(?:exercise|question|problem|task|q)\s*\d+\b", key_text)
+    )
+    if header_hits >= 2:
+        key_qas_list = _split_by_named_headers(key_text)
+
     if not key_qas_list:
         return {}, 0.0, {}
 
     full_student_text = (ans_text or "").strip()
 
-    # 3) Build student block indexes once (avoid re-splitting in the loop)
+    # ---------------------------------------------------------
+    # 3) Build student block indexes once
+    # ---------------------------------------------------------
     student_blocks_ex = {
         re.sub(r"\s+", " ", k.strip().lower()): v
         for k, v in split_by_exercise(full_student_text).items()
     }
-    student_blocks_qa = split_numbered_qa_pairs(full_student_text)
 
+    # IMPORTANT: use your robust builder (recommended)
+    # If you didn't add build_student_numbered_index(), revert to split_numbered_qa_pairs()
+    try:
+        student_blocks_qa = build_student_numbered_index(full_student_text)
+    except Exception:
+        student_blocks_qa = {}
+
+    # ✅ NEW: If numbered parsing failed (or only gave Q1), use sequential block fallback
+    # This is common in small tests where students don't label 2/3/4...
+    if len(student_blocks_qa) < 2 and full_student_text.strip():
+        seq_blocks = build_student_sequential_blocks(full_student_text)
+        if len(seq_blocks) >= 2:
+            student_blocks_qa = seq_blocks
+
+
+    # ---------------------------------------------------------
     # 4) Grade each question
+    # ---------------------------------------------------------
     results: Dict[int, Dict[str, Any]] = {}
     total_score = 0.0
     scored = 0
@@ -464,12 +769,46 @@ def process_grading(
         if len(student_for_display) > MAX_DISPLAY_CHARS:
             student_for_display = student_for_display[:MAX_DISPLAY_CHARS] + "…"
 
-        # Add a small amount of extra context (helps when student answers are messy)
-        student_context = full_student_text[:1200]
-        student_input = f"[ANSWER BLOCK]\n{student_for_grading}\n\n[EXTRA CONTEXT]\n{student_context}"
+        # -----------------------------------------------------
+        # ✅ NO-MATCH: don't call LLM
+        # -----------------------------------------------------
+        if match_mode == "no-match" or not student_for_grading.strip():
+            graded = {
+                "score": 0,
+                "feedback": "Answer not found or could not be matched to this question."
+            }
+            score = 0.0
 
-        graded = grade_submission(rubric, student_input, strictness)
-        score = float(graded.get("score", 0) or 0)
+        else:
+            # -------------------------------------------------
+            # ✅ MCQ AUTO-GRADING (no LLM)
+            # -------------------------------------------------
+            if _is_mcq_block(rubric):
+                correct_letter = _extract_mcq_letter(rubric)
+                student_letter = _extract_mcq_letter(student_for_grading)
+
+                if correct_letter and student_letter:
+                    if student_letter == correct_letter:
+                        score = 10.0
+                        graded = {"score": 10, "feedback": f"Correct. Selected {student_letter}."}
+                    else:
+                        score = 0.0
+                        graded = {"score": 0, "feedback": f"Incorrect. Selected {student_letter}; correct is {correct_letter}."}
+                else:
+                    score = 0.0
+                    graded = {"score": 0, "feedback": "Could not extract answer choice (A-D) from the response."}
+
+            else:
+                # -------------------------------------------------
+                # ✅ Non-MCQ: LLM grading as before
+                # -------------------------------------------------
+                student_context = full_student_text[:1200]
+                student_input = (
+                    f"[ANSWER BLOCK]\n{student_for_grading}\n\n"
+                    f"[EXTRA CONTEXT]\n{student_context}"
+                )
+                graded = grade_submission(rubric, student_input, strictness)
+                score = float(graded.get("score", 0) or 0)
 
         total_score += score
         scored += 1
@@ -483,11 +822,16 @@ def process_grading(
             "match_mode": match_mode,
         }
 
-        print(f"[DEBUG] Q{idx} match={match_mode} score={score} preview={student_for_display[:120]!r}")
+        print(
+            f"[DEBUG] Q{idx} match={match_mode} "
+            f"score={score} preview={student_for_display[:120]!r}"
+        )
 
     avg = round(total_score / scored, 2) if scored else 0.0
     key_qas_dict = {i: qa for i, qa in enumerate(key_qas_list, start=1)}
+
     return results, avg, key_qas_dict
+
 
 
 # -----------------------------------------------------------------------------
@@ -814,33 +1158,76 @@ TASKS: Dict[str, Dict[str, Any]] = {}
 
 def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = False):
     print(f"[INFO] async worker started: {task_id} (force_ocr={force_ocr})")
+
+    # --- NEW: timestamps for timeout + better status reporting ---
+    TASKS[task_id]["started_at"] = time.time()
+    TASKS[task_id]["phase"] = "start"
+    TASKS[task_id]["error"] = None
+
     try:
-        TASKS[task_id]["status"] = "Extracting text"
-        key_text = extract_text_from_pdf_auto(key_path)
+        # -------------------- EXTRACT --------------------
+        TASKS[task_id]["phase"] = "extract"
+        TASKS[task_id]["status"] = "Extracting text (key)"
+        key_text = extract_text_from_pdf_auto(key_path, force_ocr=force_ocr)  # keep consistent
+
+        TASKS[task_id]["status"] = "Extracting text (student)"
         ans_text = extract_text_from_pdf_auto(ans_path, force_ocr=force_ocr)
 
-        TASKS[task_id]["status"] = "Grading"
-        results, avg_score, key_qas = process_grading(key_text, ans_text, from_text=True, strictness="normal")
+        # -------------------- PRE-CHECK --------------------
+        # If extraction produced almost nothing, fail fast (avoids wasting calls)
+        if not key_text or len(key_text.strip()) < 100:
+            raise RuntimeError("Key text extraction too short/empty.")
+        if not ans_text or len(ans_text.strip()) < 100:
+            raise RuntimeError("Student text extraction too short/empty.")
 
+        # -------------------- GRADE --------------------
+        TASKS[task_id]["phase"] = "grade"
+        TASKS[task_id]["status"] = "Grading (parsing questions)"
+        # process_grading already uses your robust splitters, preprocess, etc.
+        results, avg_score, key_qas = process_grading(
+            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr
+        )
+
+        # --- NEW: cap runaway parse explosions ---
+        # If something created 50+ fake questions, stop.
+        # (Tune the limit if you have truly huge exams.)
+        if results and len(results) > 30:
+            raise RuntimeError(
+                f"Parsed too many question blocks ({len(results)}). "
+                "Likely OCR/page-marker noise caused split explosion."
+            )
+
+        # -------------------- WEIGHTS --------------------
+        TASKS[task_id]["phase"] = "weight"
+        TASKS[task_id]["status"] = "Computing totals"
         try:
             results, total_awarded, total_possible, weighted_pct = apply_dynamic_weights(results, key_qas)
             TASKS[task_id]["average_display"] = f"Total: {total_awarded:.2f} / {total_possible} points ({weighted_pct}%)"
         except Exception:
             TASKS[task_id]["average_display"] = None
 
+        # -------------------- DONE --------------------
+        TASKS[task_id]["phase"] = "done"
         TASKS[task_id]["status"] = f"Completed (Avg Score {avg_score}/10)"
         TASKS[task_id]["result"] = results
+
     except Exception as e:
+        TASKS[task_id]["phase"] = "error"
         TASKS[task_id]["status"] = f"Failed: {e}"
+        TASKS[task_id]["error"] = f"{type(e).__name__}: {e}"
         TASKS[task_id]["result"] = None
         print(f"[ERROR] async worker: {e}\n{traceback.format_exc()}")
+
     finally:
+        TASKS[task_id]["finished_at"] = time.time()
+
         for p in (key_path, ans_path):
             if os.path.exists(p):
                 try:
                     os.remove(p)
                 except Exception:
                     pass
+
 
 
 @app.route("/grade_async", methods=["POST"])
@@ -859,9 +1246,24 @@ def grade_async():
     ans_file.save(ans_path)
 
     force_ocr = "force_ocr" in request.form
-    TASKS[task_id] = {"status": "Starting", "result": None, "average_display": None}
 
-    threading.Thread(target=_async_worker, args=(task_id, key_path, ans_path, force_ocr), daemon=True).start()
+    # ✅ NEW: add timestamps + error fields so status_json can stop polling safely
+    TASKS[task_id] = {
+        "status": "Starting",
+        "result": None,
+        "average_display": None,
+        "started_at": time.time(),
+        "finished_at": None,
+        "error": None,
+        "phase": "start",
+    }
+
+    threading.Thread(
+        target=_async_worker,
+        args=(task_id, key_path, ans_path, force_ocr),
+        daemon=True
+    ).start()
+
     return jsonify({"task_id": task_id})
 
 
@@ -872,10 +1274,40 @@ def status_json(task_id: str):
     if not task:
         return {"error": "Task not found"}, 404
 
-    if not str(task.get("status", "")).startswith("Completed"):
-        return {"status": task.get("status", ""), "done": False}
+    status_text = str(task.get("status", "") or "")
+    phase = task.get("phase")
+    started_at = task.get("started_at")
 
-    status_text = str(task.get("status", ""))
+    # ✅ NEW: hard timeout (prevents infinite polling)
+    # Tune this as needed (10 min is a safe starting point)
+    TIMEOUT_SECONDS = 600
+    if started_at and not status_text.startswith("Completed") and not status_text.startswith("Failed"):
+        elapsed = time.time() - float(started_at)
+        if elapsed > TIMEOUT_SECONDS:
+            task["status"] = "Failed: Timeout (grading took too long)"
+            task["error"] = "Timeout: grading exceeded time limit; likely parse explosion or API delay."
+            task["phase"] = "error"
+            task["finished_at"] = time.time()
+            status_text = task["status"]
+            phase = task["phase"]
+
+    # ✅ If failed, stop polling and return the error
+    if status_text.startswith("Failed"):
+        return {
+            "status": status_text,
+            "done": True,
+            "error": task.get("error") or status_text
+        }
+
+    # ✅ If not completed yet, keep polling
+    if not status_text.startswith("Completed"):
+        return {
+            "status": status_text,
+            "done": False,
+            "phase": phase
+        }
+
+    # ✅ Completed → return result HTML fragment
     avg_match = re.search(r"Avg Score ([0-9.]+)/10", status_text)
     avg_score = avg_match.group(1) if avg_match else None
 
