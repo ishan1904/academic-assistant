@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Grading Agent (Flask)
+
 
 This app supports:
 - User auth (signup/login/logout) with a simple SQLite database
