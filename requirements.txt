@@ -21,8 +21,9 @@ PyMuPDF==1.24.10
 # --- OCR / Vision (Gemini) ---
 google-generativeai==0.7.2
 Pillow==10.4.0
-protobuf==5.27.2
-grpcio==1.65.5
+protobuf>=3.19.5,<5
+# grpcio is pulled transitively; don't pin it to avoid conflicts
+
 
 # --- LLM Providers ---
 groq==0.11.0
