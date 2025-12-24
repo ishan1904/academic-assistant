@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generated Exam Papers</title>
+    <title>{{ t('generated_exam_papers_title') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -57,17 +57,34 @@
             color: red;
             font-weight: bold;
         }
+        .langbar {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-bottom: 10px;
+        }
+        .langbar a {
+            text-decoration:none;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Generated Exam Papers</h1>
+        <div class="langbar">
+            <span>{{ t('language') }}:</span>
+            <a href="{{ url_for('set_lang', lang='en') }}">EN</a>
+            <a href="{{ url_for('set_lang', lang='es') }}">ES</a>
+        </div>
+
+        <h1>{{ t('generated_exam_papers_title') }}</h1>
+
         {% if error %}
             <p class="error">{{ error }}</p>
         {% endif %}
+
         {% if exam_papers %}
             {% if exam_papers is string %}
-                <!-- Handle case where exam_papers is a raw string -->
                 {% for line in exam_papers.split('\n') %}
                     {% if line.strip().startswith('Exam 1 - Student') %}
                         <div class="exam-container">
@@ -75,15 +92,14 @@
                     {% elif line.strip() %}
                         <div class="question">{{ line.strip() }}</div>
                     {% elif line == '' and loop.previtem.strip().startswith('Exam 1 - Student') %}
-                        </div> <!-- Close the previous exam-container -->
+                        </div>
                     {% endif %}
                 {% endfor %}
-                </div> <!-- Close the last exam-container if not already closed -->
+                </div>
             {% else %}
-                <!-- Handle case where exam_papers is a structured object (e.g., dict or list) -->
                 {% for student, questions in exam_papers.items() %}
                     <div class="exam-container">
-                        <h2 class="exam-title">Exam 1 - {{ student }}</h2>
+                        <h2 class="exam-title">{{ t('exam_1') }} - {{ student }}</h2>
                         {% for question in questions %}
                             <div class="question">{{ question }}</div>
                         {% endfor %}
@@ -91,16 +107,17 @@
                 {% endfor %}
             {% endif %}
         {% else %}
-            <p>No exam papers generated.</p>
+            <p>{{ t('no_exam_papers_generated') }}</p>
         {% endif %}
+
         <div class="button-container">
             {% if exam_filename %}
                 <a href="{{ url_for('download_exam_papers', exam_filename=exam_filename) }}" class="btn">
-                    Download Exam Papers
+                    {{ t('download_exam_papers') }}
                 </a>
             {% endif %}
             <a href="{{ url_for('dashboard') }}" class="btn btn-back">
-                Back to Dashboard
+                {{ t('back_to_dashboard') }}
             </a>
         </div>
     </div>

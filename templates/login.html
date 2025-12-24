@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login - AI-Powered Academic Assistant</title>
+    <title>{{ t("login_title") }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -101,7 +102,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Login</h2>
+        <h2>{{ t("login") }}</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -110,17 +111,17 @@
             {% endif %}
         {% endwith %}
         <form method="POST" action="{{ url_for('login') }}" onsubmit="return validateEmail()">
-            <label for="email">Email:</label>
-            <input type="email" id="email" name="email" placeholder="Enter your email" required
+            <label for="email">{{ t("email") }}:</label>
+            <input type="email" id="email" name="email" placeholder="{{ t('enter_email') }}" required
                    pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
-                   title="Please enter a valid email address (e.g., user@example.com)">
+                   title="{{ t('email_title_hint') }}">
 
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            <label for="password">{{ t("password") }}:</label>
+            <input type="password" id="password" name="password" placeholder="{{ t('enter_password') }}" required>
 
-            <button type="submit">Login</button>
+            <button type="submit">{{ t("login") }}</button>
         </form>
-        <p>Don't have an account? <a href="{{ url_for('signup') }}">Sign up</a></p>
+        <p>{{ t('no_account') }} <a href="{{ url_for('signup') }}">{{ t('signup') }}</a></p>
     </div>
 
     <script>
@@ -129,7 +130,7 @@
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
             if (!emailRegex.test(emailInput)) {
-                alert("Invalid email format. Please enter a valid email (e.g., user@example.com).");
+                alert("{{ t('invalid_email_alert') }}");
                 return false;
             }
 

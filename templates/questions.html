@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Generated Questions</title>
+    <title>{{ t('generated_questions_title') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -67,25 +68,44 @@
             font-weight: bold;
             text-align: center;
         }
+        .langbar {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-bottom: 10px;
+        }
+        .langbar a {
+            text-decoration:none;
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Generated Questions</h1>
+        <div class="langbar">
+            <span>{{ t('language') }}:</span>
+            <a href="{{ url_for('set_lang', lang='en') }}">EN</a>
+            <a href="{{ url_for('set_lang', lang='es') }}">ES</a>
+        </div>
+
+        <h1>{{ t('generated_questions_title') }}</h1>
+
         {% if error %}
             <p class="error">{{ error }}</p>
         {% endif %}
+
         <div class="questions">
             {{ questions | safe }}
         </div>
+
         <div class="button-container">
             {% if question_filename %}
                 <a href="{{ url_for('download_questions', filename=question_filename) }}" class="btn">
-                    Download Questions
+                    {{ t('download_questions') }}
                 </a>
             {% endif %}
             <a href="{{ url_for('dashboard') }}" class="btn">
-                Back to Dashboard
+                {{ t('back_to_dashboard') }}
             </a>
         </div>
     </div>

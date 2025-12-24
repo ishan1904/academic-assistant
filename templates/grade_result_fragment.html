@@ -1,6 +1,8 @@
 
+
+
 {% if avg_score is not none %}
-<p><strong>Score:</strong> {{ avg_score }}</p>
+<p><strong>{{ t('score') }}:</strong> {{ avg_score }}</p>
 {% endif %}
 
 <style>
@@ -34,11 +36,11 @@
   <thead>
     <tr>
       <th>#</th>
-      <th>Question</th>
-      <th>Correct Answer</th>
-      <th>Student Answer</th>
-      <th>Evaluation</th>
-      <th>Score</th>
+      <th>{{ t('question') }}</th>
+      <th>{{ t('correct_answer') }}</th>
+      <th>{{ t('student_answer') }}</th>
+      <th>{{ t('evaluation') }}</th>
+      <th>{{ t('score') }}</th>
     </tr>
   </thead>
 

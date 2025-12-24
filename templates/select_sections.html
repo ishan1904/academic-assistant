@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Select Sections Open AI</title>
+    <title>{{ t('select_sections_title') }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -75,63 +75,67 @@
             background-color: #e53935;
         }
 
-        .point {
-            margin-left: 25px;
-            line-height: 1.6;
-        }
-
-        .sub-point {
-            margin-left: 45px;
-            font-style: italic;
-        }
-
-        ul.examples {
-            margin-left: 25px;
-            list-style-type: disc;
-        }
-
         h2, h3 {
             text-align: center;
+        }
+
+        .langbar {
+            display:flex;
+            justify-content:flex-end;
+            gap:10px;
+            margin-bottom: 10px;
+        }
+        .langbar a {
+            text-decoration:none;
+            font-size: 14px;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>Select Sections</h1>
+        <div class="langbar">
+            <span>{{ t('language') }}:</span>
+            <a href="{{ url_for('set_lang', lang='en') }}">EN</a>
+            <a href="{{ url_for('set_lang', lang='es') }}">ES</a>
+        </div>
+
+        <h1>{{ t('select_sections_heading') }}</h1>
+
         <form action="/select_sections" method="POST">
             <input type="hidden" name="temp_filename" value="{{ temp_filename }}">
 
             {% if structured_data.sections %}
-                <h2>Course: {{ structured_data.course_name }}</h2>
-                <h3>Professor: {{ structured_data.professor_name }}</h3>
-                <p>Select which sections to keep:</p>
+                <h2>{{ t('course_label') }}: {{ structured_data.course_name }}</h2>
+                <h3>{{ t('professor_label') }}: {{ structured_data.professor_name }}</h3>
+                <p>{{ t('select_sections_prompt') }}</p>
 
                 {% for section in structured_data.sections %}
                     <div class="section">
-                        <input type="checkbox" id="section_{{ loop.index }}" name="sections" value="{{ section.section }}"> <!-- Updated to use 'section' key -->
+                        <input type="checkbox" id="section_{{ loop.index }}" name="sections" value="{{ section.section }}">
                         <label for="section_{{ loop.index }}">
-                            <strong>{{ section.section }}</strong> <!-- Updated to use 'section' key -->
+                            <strong>{{ section.section }}</strong>
                         </label>
                         <div>{{ section.description }}</div>
 
-                        {% set examples = section.get('examples') or section.get('EXAMPLES') or section.get('recommendations') %} <!-- Updated to handle 'recommendations' -->
+                        {% set examples = section.get('examples') or section.get('EXAMPLES') or section.get('recommendations') %}
                         {% if examples %}
-                            <strong>Examples:</strong>
+                            <strong>{{ t('examples_label') }}:</strong>
                             <ul>
                                 {% for example in examples %}
                                     <li>{{ example }}</li>
                                 {% endfor %}
                             </ul>
-                            {% endif %}
+                        {% endif %}
                     </div>
                 {% endfor %}
             {% else %}
-                <p>No sections available for selection.</p>
+                <p>{{ t('no_sections_available') }}</p>
             {% endif %}
 
-            <button type="submit">Submit</button>
+            <button type="submit">{{ t('submit') }}</button>
         </form>
-        <a href="/" class="back-button">Back</a>
+
+        <a href="/" class="back-button">{{ t('back') }}</a>
     </div>
 </body>
 </html>

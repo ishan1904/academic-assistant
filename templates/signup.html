@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Signup - AI-Powered Academic Assistant</title>
+    <title>{{ t("signup_title") }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -102,7 +103,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Signup</h2>
+        <h2>{{ t("signup") }}</h2>
         {% with messages = get_flashed_messages(with_categories=true) %}
             {% if messages %}
                 {% for category, message in messages %}
@@ -111,18 +112,18 @@
             {% endif %}
         {% endwith %}
         <form method="POST" action="{{ url_for('signup') }}" onsubmit="return validateEmail()">
-            <label for="username">Username:</label>
-            <input type="text" id="username" name="username" placeholder="Enter your username" required>
+            <label for="username">{{ t("username") }}:</label>
+            <input type="text" id="username" name="username" placeholder="{{ t('enter_username') }}" required>
 
-            <label for="email">Email:</label>
-            <input type="text" id="email" name="email" placeholder="Enter your email" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
+            <label for="email">{{ t("email") }}:</label>
+            <input type="text" id="email" name="email" placeholder="{{ t('enter_email') }}" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
 
-            <label for="password">Password:</label>
-            <input type="password" id="password" name="password" placeholder="Enter your password" required>
+            <label for="password">{{ t("password") }}:</label>
+            <input type="password" id="password" name="password" placeholder="{{ t('enter_password') }}" required>
 
-            <button type="submit">Sign Up</button>
+            <button type="submit">{{ t("sign_up_btn") }}</button>
         </form>
-        <p>Already have an account? <a href="{{ url_for('login') }}">Log in</a></p>
+        <p>{{ t("have_account") }} <a href="{{ url_for('login') }}">{{ t("login") }}</a></p>
     </div>
 
     <script>
@@ -131,7 +132,7 @@
             const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
 
             if (!emailRegex.test(emailInput)) {
-                alert("Invalid email format. Please enter a valid email (e.g., user@example.com).");
+                alert("{{ t('invalid_email_alert') }}");
                 return false;
             }
 

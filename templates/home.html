@@ -1,9 +1,10 @@
+
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Welcome to AI Powered Academic Assistant</title>
+    <title>{{ t("home_title") }}</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -105,38 +106,54 @@
     </style>
 </head>
 <body>
+    <!-- Language Toggle -->
+    <div style="
+        position: absolute;
+        top: 20px;
+        right: 30px;
+        z-index: 9999;
+        background: rgba(255,255,255,0.9);
+        padding: 6px 12px;
+        border-radius: 10px;
+        font-size: 14px;
+    ">
+        <strong>{{ t("language") }}:</strong>
+        <a href="{{ url_for('set_lang', lang='en') }}">EN</a> |
+        <a href="{{ url_for('set_lang', lang='es') }}">ES</a>
+    </div>
+
     <div class="container">
         <div class="header">
-            <h1>Welcome to AI Powered Academic Assistant</h1>
-            <p>Your ultimate tool for educational content creation and analysis</p>
+            <h1>{{ t("home_heading") }}</h1>
+            <p>{{ t("home_tagline") }}</p>
         </div>
         <div class="card">
-            <h2>Explore Our Features</h2>
-            <p>AI Powered Academic Assistant tool empowers educators and students with tools to streamline academic tasks. From generating questions to analyzing syllabi, our platform enhances your educational experience.</p>
+            <h2>{{ t("explore_features") }}</h2>
+            <p>{{ t("home_blurb") }}</p>
             <div class="feature-list">
                 <div class="feature">
-                    <h3>Generate Questions</h3>
-                    <p>Create customized question sets, including multiple-choice, true/false, and more, from uploaded documents.</p>
+                    <h3>{{ t("feat_generate_questions") }}</h3>
+                    <p>{{ t("feat_generate_questions_desc") }}</p>
                 </div>
                 <div class="feature">
-                    <h3>Exam Papers</h3>
-                    <p>Generate unique exam papers for multiple students, tailored to your presentation slides.</p>
+                    <h3>{{ t("feat_exam_papers") }}</h3>
+                    <p>{{ t("feat_exam_papers_desc") }}</p>
                 </div>
                 <div class="feature">
-                    <h3>Core Concepts</h3>
-                    <p>Extract and summarize key concepts from chapters or documents for quick review.</p>
+                    <h3>{{ t("feat_core_concepts") }}</h3>
+                    <p>{{ t("feat_core_concepts_desc") }}</p>
                 </div>
                 <div class="feature">
-                    <h3>Syllabus Analysis</h3>
-                    <p>Receive structured AI-driven recommendations to enhance your course objectives.</p>
+                    <h3>{{ t("feat_syllabus_analysis") }}</h3>
+                    <p>{{ t("feat_syllabus_analysis_desc") }}</p>
                 </div>
                 <div class="feature">
-                    <h3>Recommendation Letters</h3>
-                    <p>Generate professional letters of recommendation based on resumes for academic or career applications.</p>
+                    <h3>{{ t("feat_recommendation_letters") }}</h3>
+                    <p>{{ t("feat_recommendation_letters_desc") }}</p>
                 </div>
             </div>
             <div class="options-menu">
-                <a href="{{ url_for('login') }}" class="option-btn">Log In to Get Started</a>
+                <a href="{{ url_for('login') }}" class="option-btn">{{ t("login_to_get_started") }}</a>
             </div>
         </div>
     </div>

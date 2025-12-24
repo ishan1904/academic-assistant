@@ -15,6 +15,8 @@ Notes for beginners:
 """
 
 from __future__ import annotations
+from flask import session, request, redirect, url_for
+
 
 import os
 import re
@@ -27,6 +29,7 @@ import time
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Dict, List, Tuple, Optional
+from translations import get_translation
 
 from dotenv import load_dotenv
 from flask import (
@@ -67,6 +70,28 @@ socket.setdefaulttimeout(180)  # global network timeout (seconds)
 app = Flask(__name__)
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
 
+
+# ===============================
+# i18n (English / Spanish)
+# ===============================
+
+SUPPORTED_LANGS = {"en", "es"}
+
+
+def get_lang():
+    return session.get("lang", "en")
+
+@app.context_processor
+def inject_i18n():
+    def t(key):
+        return get_translation(get_lang(), key)
+    return {
+        "t": t,
+        "get_lang": get_lang
+    }
+
+
+
 # Flask session + basic security settings
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "fallback_secret")
 app.config["SESSION_COOKIE_SECURE"] = False  # set True behind HTTPS in production
@@ -100,14 +125,14 @@ if GOOGLE_API_KEY:
 # Database 
 # -----------------------------------------------------------------------------
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+# DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+# if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
+#     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+# app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
 
-# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -671,6 +696,8 @@ def build_student_sequential_blocks(full_student_text: str) -> Dict[int, str]:
         out[i] = c
     return out
 
+
+
 def process_grading(
     key_source: str,
     ans_source: str,
@@ -1069,6 +1096,13 @@ def debug_session():
     """Small debug endpoint to confirm session values."""
     return jsonify({k: session.get(k) for k in ("user_id", "username")})
 
+@app.route("/set_lang/<lang>")
+def set_lang(lang):
+    if lang not in SUPPORTED_LANGS:
+        lang = "en"
+    session["lang"] = lang
+    return redirect(request.referrer or url_for("dashboard"))
+
 
 # -----------------------------------------------------------------------------
 # Routes: Grading (sync)
@@ -1236,7 +1270,7 @@ def grade_async():
     key_file = request.files.get("key_pdf")
     ans_file = request.files.get("ans_pdf") or request.files.get("answer_pdf")
     if not key_file or not ans_file:
-        return jsonify({"error": "Please upload both files."}), 400
+        return jsonify({"error": t("upload_both")}), 400
 
     task_id = str(uuid.uuid4())
     key_path = os.path.join(app.config["TEMP_FOLDER"], f"{task_id}_key.pdf")
