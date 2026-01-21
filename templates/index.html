@@ -292,6 +292,110 @@
                 transform: scale(1);
             }
         }
+        .section-output {
+            background: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            padding: 18px;
+        }
+
+        .section-output h4 {
+            margin-top: 12px;
+            margin-bottom: 6px;
+            color: #2e7d32;
+            font-size: 16px;
+        }
+
+        .section-output ul {
+            padding-left: 20px;
+        }
+
+        .section-output li {
+            margin-bottom: 6px;
+            line-height: 1.4;
+        }
+
+        .ui-block {
+            margin-bottom: 14px;
+        }
+
+        .ui-error {
+            background: #ffecec;
+            border: 1px solid #ffb3b3;
+            color: #a10000;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        .exam-student-block {
+            border: 1px solid #e5e5e5;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin: 12px 0;
+            background: #fff;
+        }
+
+        .exam-student-title {
+            margin: 0 0 10px 0;
+            font-size: 16px;
+        }
+
+        .exam-question-list {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .exam-question-item {
+            margin-bottom: 12px;
+            line-height: 1.4;
+        }
+
+        .q-title {
+            margin-bottom: 6px;
+        }
+
+        .q-meta {
+            display: flex;
+            gap: 14px;
+            font-size: 13px;
+            opacity: 0.85;
+            margin-bottom: 6px;
+        }
+
+        .q-answer summary {
+            cursor: pointer;
+        }
+
+        .section-output-pre {
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
+        font-size: 16px !important;
+        line-height: 1.6 !important;
+        white-space: normal !important;
+        }
+
+        .exam-student-title { font-size: 18px; font-weight: 700; }
+
+        .q-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
+
+        .q-answer-preview { margin: 8px 0; }
+
+        .q-answer-body { white-space: pre-wrap; padding-top: 6px; }
+
+        .q-meta { font-size: 14px; opacity: 0.85; margin-top: 10px; display:flex; gap:16px; }
+
+        .pretty-p { margin: 8px 0; line-height: 1.6; font-size: 16px; }
+        .p-gap { height: 10px; }
+
+        .pretty-list { margin: 10px 0 10px 18px; }
+        .pretty-list li { margin: 6px 0; line-height: 1.55; font-size: 16px; }
+
+        .letter-box { font-size: 16px; line-height: 1.7; }
+        .letter-p { margin: 10px 0; }
+        .pretty-text { font-size: 16px; line-height: 1.6; }
+
+
+
     </style>
 </head>
 
@@ -336,7 +440,7 @@
         <section class="welcome">
             <h1>{{ t('welcome_heading') }}</h1>
             <p>{{ t('welcome_blurb') }}</p>
-            
+
             <h3>{{ t('what_you_can_do') }}</h3>
             <ul>
             <li>
@@ -379,7 +483,7 @@
                 <button class="option-btn" onclick="showSection('exam')">{{ t('exam_questions_generation') }}</button>
                 <button class="option-btn" onclick="showSection('grade')">{{ t('grading') }}</button>
               </div>
-              
+
 
             <!-- Content Sections -->
             <div id="syllabus-section" class="content-section active">
@@ -397,6 +501,12 @@
 
                     <button type="submit" name="action" value="structured">{{ t('enhance_syllabus_btn') }}</button>
                 </form>
+
+                <div class="section-output final-output" style="display:none; margin-top:16px;">
+                    <div class="section-title">Output</div>
+                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
+                </div>
+
             </div>
 
             <div id="chapter-section" class="content-section">
@@ -414,9 +524,15 @@
 
                     <div class="button-group">
                         <button type="button" onclick="showModal()">{{ t('customize_questions') }}</button>
-                        <button type="submit" name="action" value="concepts">{{ t('extract_core_concepts') }}</button>
+                        <button type="button" onclick="submitChapterConcepts()">{{ t('extract_core_concepts') }}</button>
                     </div>
                 </form>
+
+                <div class="section-output final-output" style="display:none; margin-top:16px;">
+                    <div class="section-title">Output</div>
+                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
+                </div>
+
             </div>
 
             <div id="resume-section" class="content-section">
@@ -434,14 +550,19 @@
 
                     <button type="button" onclick="showRecModal()">{{ t('generate_recommendation_letter') }}</button>
                 </form>
+
+                <div class="section-output final-output" style="display:none; margin-top:16px;">
+                    <div class="section-title">Output</div>
+                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
+                </div>
             </div>
 
             <div id="exam-section" class="content-section">
                 <h2>{{ t('exam_questions_generation') }}</h2>
                 <p>{{ t('exam_upload_desc') }}</p>
                 <form id="examUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-                    <label for="exam_files">{{ t('choose_pptx') }}</label>
-                    <input type="file" id="exam_files" name="exam_files" accept=".pptx, .ppt" multiple required>
+                    <label for="exam_files">Choose PPTX/PPT or PDF files:</label>
+                    <input type="file" id="exam_files" name="exam_files" accept=".ppt, .pptx, .pdf" multiple required>
 
                     <label for="exam_ai_model">{{ t('select_ai_model') }}</label>
                     <select id="exam_ai_model" name="ai_model">
@@ -452,6 +573,11 @@
                     <input type="hidden" name="action" value="exam_papers">
                     <button type="button" onclick="showExamModal()">{{ t('generate_exam_questions') }}</button>
                 </form>
+
+                <div class="section-output final-output" style="display:none; margin-top:16px;">
+                    <div class="section-title">Output</div>
+                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
+                </div>
             </div>
         </div>
 
@@ -473,15 +599,10 @@
                 </div>
             </form>
 
-    <!-- Results will be injected here -->
-    <div id="grade-results" class="final-output" style="display:none; margin-top:16px;"></div>
-</div>
 
-          
             <!-- Results will be injected here -->
             <div id="grade-results" class="final-output" style="display:none; margin-top:16px;"></div>
-          </div>
-          
+
 
             <!-- Error and Success Messages -->
             {% if error %}
@@ -574,7 +695,8 @@
         </div>
     </div>
 
-    <script src="https://kit.fontawesome.com/your-font-awesome-kit.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
     <script>
         // Show section based on option button click
         function showSection(section) {
@@ -615,48 +737,84 @@
             document.getElementById('questionModal').style.display = 'none';
         }
 
-        document.getElementById('modalForm').addEventListener('submit', function (event) {
+        document.getElementById('modalForm').addEventListener('submit', async function (event) {
             event.preventDefault();
+
+            const fileInput = document.getElementById('chapter_file');
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please select a file first.");
+                return;
+            }
+
             showProcessing();
-            const chapterForm = document.getElementById('chapterForm');
-            const modalTotalQuestions = document.getElementById('modal_total_questions').value;
-            const modalMcqCount = document.getElementById('modal_mcq_count').value;
-            const modalTfCount = document.getElementById('modal_tf_count').value;
-            const modalOthersCount = document.getElementById('modal_others_count').value;
+            try {
+                // Build FormData from the main chapter form so the file is included
+                const chapterForm = document.getElementById('chapterForm');
+                const fd = new FormData(chapterForm);
 
-            const totalQuestionsInput = document.createElement('input');
-            totalQuestionsInput.type = 'hidden';
-            totalQuestionsInput.name = 'total_questions';
-            totalQuestionsInput.value = modalTotalQuestions;
+                fd.set("ai_model", document.getElementById('chapter_ai_model').value);
+                fd.set("action", "questions");
+                fd.set("total_questions", document.getElementById('modal_total_questions').value);
+                fd.set("mcq_count", document.getElementById('modal_mcq_count').value);
+                fd.set("tf_count", document.getElementById('modal_tf_count').value);
+                fd.set("others_count", document.getElementById('modal_others_count').value);
 
-            const mcqCountInput = document.createElement('input');
-            mcqCountInput.type = 'hidden';
-            mcqCountInput.name = 'mcq_count';
-            mcqCountInput.value = modalMcqCount;
+                const res = await fetch("/upload", {
+                    method: "POST",
+                    body: fd,
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
 
-            const tfCountInput = document.createElement('input');
-            tfCountInput.type = 'hidden';
-            tfCountInput.name = 'tf_count';
-            tfCountInput.value = modalTfCount;
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.error || `Request failed (status ${res.status}).`);
+                }
 
-            const othersCountInput = document.createElement('input');
-            othersCountInput.type = 'hidden';
-            othersCountInput.name = 'others_count';
-            othersCountInput.value = modalOthersCount;
-
-            const actionInput = document.createElement('input');
-            actionInput.type = 'hidden';
-            actionInput.name = 'action';
-            actionInput.value = 'questions';
-
-            chapterForm.appendChild(totalQuestionsInput);
-            chapterForm.appendChild(mcqCountInput);
-            chapterForm.appendChild(tfCountInput);
-            chapterForm.appendChild(othersCountInput);
-            chapterForm.appendChild(actionInput);
-
-            chapterForm.submit();
+                renderAiOutput(data.action || "questions", data.result ?? data);
+                closeModal();
+            } catch (e) {
+                renderAiOutput("questions", { error: e.message });
+                alert(e.message);
+            } finally {
+                hideProcessing();
+            }
         });
+        document.getElementById("syllabusForm").addEventListener("submit", async function (event) {
+            event.preventDefault();
+
+            const fileInput = document.getElementById("file");
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert("Please upload a syllabus file first.");
+                return;
+            }
+
+            showProcessing();
+            try {
+                const fd = new FormData(this);
+
+                // ensure action=structured is included
+                if (event.submitter && event.submitter.name) {
+                fd.set(event.submitter.name, event.submitter.value);
+                }
+
+                const res = await fetch("/upload", {
+                method: "POST",
+                body: fd,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || `Request failed (status ${res.status}).`);
+
+                renderAiOutput(data.action || "structured", data.result ?? data);
+            } catch (e) {
+                renderAiOutput("structured", { error: e.message });
+                alert(e.message);
+            } finally {
+                hideProcessing();
+            }
+            });
+
 
         function showRecModal() {
             const fileInput = document.getElementById('resume_file');
@@ -680,43 +838,49 @@
             document.getElementById('recModal').style.display = 'none';
         }
 
-        document.getElementById("recForm").addEventListener("submit", function (event) {
+        document.getElementById("recForm").addEventListener("submit", async function (event) {
             event.preventDefault();
-            showProcessing();
-            const fileInput = document.getElementById("resume_file");
 
+            const fileInput = document.getElementById("resume_file");
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert("File not found. Please upload a resume file before submitting.");
-                hideProcessing();
+                alert("Please upload a resume file first.");
                 return;
             }
 
-            const formData = new FormData(this);
-            formData.append("resume_file", fileInput.files[0]);
+            showProcessing();
+            try {
+                const fd = new FormData(this);
+                // Attach the actual file from the main form
+                fd.set("resume_file", fileInput.files[0]);
 
-            fetch("/upload", {
-                method: "POST",
-                body: formData
-            })
-            .then(response => response.text())
-            .then(data => {
-                console.log("Response received:", data);
-                document.body.innerHTML = data;
+                const res = await fetch("/upload", {
+                    method: "POST",
+                    body: fd,
+                    headers: { "X-Requested-With": "XMLHttpRequest" }
+                });
+
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.error || `Request failed (status ${res.status}).`);
+                }
+
+                renderAiOutput(data.action || "recommendation", data.result ?? data);
+                closeRecModal();
+            } catch (e) {
+                renderAiOutput("recommendation", { error: e.message });
+                alert(e.message);
+            } finally {
                 hideProcessing();
-            })
-            .catch(error => {
-                console.error("Error:", error);
-                hideProcessing();
-                alert("An error occurred while processing your request.");
-            });
+            }
         });
+
 
         function showExamModal() {
             const fileInput = document.getElementById('exam_files');
             const aiModelSelect = document.getElementById('exam_ai_model');
 
             if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please select at least one PPTX file before generating exam papers.");
+                alert("Please select at least one PPTX/PPT or PDF file before generating exam papers.");
                 return;
             }
 
@@ -732,59 +896,318 @@
             document.getElementById('examModal').style.display = 'none';
         }
 
-        function submitExamForm() {
-            const numStudents = document.getElementById('num_students').value;
-            const questionsPerStudent = document.getElementById('questions_per_student').value;
+       async function submitExamForm() {
+        const numStudents = document.getElementById('num_students').value;
+        const questionsPerStudent = document.getElementById('questions_per_student').value;
 
-            if (!numStudents || !questionsPerStudent || numStudents < 1 || questionsPerStudent < 1) {
-                alert('Please enter valid numbers for students and questions.');
-                return;
-            }
-
-            showProcessing();
-            const examForm = document.getElementById('examUploadForm');
-            const numStudentsInput = document.createElement('input');
-            numStudentsInput.type = 'hidden';
-            numStudentsInput.name = 'num_students';
-            numStudentsInput.value = numStudents;
-
-            const questionsInput = document.createElement('input');
-            questionsInput.type = 'hidden';
-            questionsInput.name = 'questions_per_student';
-            questionsInput.value = questionsPerStudent;
-
-            examForm.appendChild(numStudentsInput);
-            examForm.appendChild(questionsInput);
-
-            examForm.submit();
+        if (!numStudents || !questionsPerStudent || numStudents < 1 || questionsPerStudent < 1) {
+            alert('Please enter valid numbers for students and questions.');
+            return;
         }
 
-        document.getElementById("examUploadForm").addEventListener("submit", function(event) {
-            const fileInput = document.getElementById("exam_files");
+        const examForm = document.getElementById('examUploadForm'); // MUST be the form
 
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please select at least one PPTX file before generating exam papers.");
-                event.preventDefault();
-                return;
-            }
+        // attach/update hidden inputs
+        setHidden(examForm, "num_students", numStudents);
+        setHidden(examForm, "questions_per_student", questionsPerStudent);
 
-            console.log("Selected file:", fileInput.files[0]);
-        });
+        showProcessing();
+        try {
+            const data = await postFormAjax(examForm);
+            renderAiOutput(data.action || "exam_papers", data.result ?? data);
+            closeExamModal();
+        } catch (e) {
+            renderAiOutput("exam_papers", { error: e.message });
+            alert(e.message);
+        } finally {
+            hideProcessing();
+        }
+    }
 
-        document.getElementById("syllabusForm").addEventListener("submit", function(event) {
+
+        // Chapter concepts submit (normal button)
+        document.getElementById("chapterForm").addEventListener("submit", async function(event) {
+            event.preventDefault();
             showProcessing();
+            try {
+                const data = await postFormAjax(this);
+                renderAiOutput(data.action || "chapter", data.result ?? data);
+            } catch (e) {
+                renderAiOutput("chapter", { error: e.message });
+                alert(e.message);
+            } finally {
+                hideProcessing();
+            }
         });
-
         function showProcessing() {
             document.getElementById('processingScreen').style.display = 'flex';
-        } 
+        }
 
         function hideProcessing() {
             document.getElementById('processingScreen').style.display = 'none';
         }
-        
-            
-        (function () {
+
+        function escapeHtml(str) {
+            return String(str)
+                .replaceAll("&", "&amp;")
+                .replaceAll("<", "&lt;")
+                .replaceAll(">", "&gt;")
+                .replaceAll('"', "&quot;")
+                .replaceAll("'", "&#039;");
+            }
+
+            // Minimal markdown-ish formatter:
+            // - converts **bold** to <strong>
+            // - converts "- item" lines to <ul><li>...</li></ul>
+            // - keeps paragraphs readable
+            function formatMarkdownLite(text) {
+            const lines = String(text).split(/\r?\n/);
+
+            const htmlLines = [];
+            let inList = false;
+
+            for (let raw of lines) {
+                const line = raw.trim();
+
+                // blank line = paragraph break
+                if (!line) {
+                if (inList) {
+                    htmlLines.push("</ul>");
+                    inList = false;
+                }
+                htmlLines.push("<div class='p-gap'></div>");
+                continue;
+                }
+
+                // bullet line
+                if (/^-\s+/.test(line)) {
+                if (!inList) {
+                    htmlLines.push("<ul class='pretty-list'>");
+                    inList = true;
+                }
+                const item = line.replace(/^-\s+/, "");
+                htmlLines.push(`<li>${escapeHtml(item).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</li>`);
+                continue;
+                }
+
+                // normal text line
+                if (inList) {
+                htmlLines.push("</ul>");
+                inList = false;
+                }
+
+                const safe = escapeHtml(line).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+                htmlLines.push(`<p class="pretty-p">${safe}</p>`);
+            }
+
+            if (inList) htmlLines.push("</ul>");
+            return htmlLines.join("\n");
+            }
+
+            // Recommendation letter formatter:
+            // Splits into paragraphs and adds spacing like a real letter
+            function formatLetter(text) {
+            const safe = escapeHtml(String(text));
+
+            // Normalize: split by blank lines
+            const paras = safe.split(/\n\s*\n/g).map(p => p.trim()).filter(Boolean);
+
+            // If model returns one giant paragraph, at least split by sentence clusters
+            const finalParas = paras.length === 1
+                ? safe.split(/(?<=[.!?])\s+(?=[A-Z])/g).reduce((acc, sentence) => {
+                    // group ~2-3 sentences per paragraph
+                    if (!acc.length || acc[acc.length - 1].split(".").length > 3) acc.push(sentence);
+                    else acc[acc.length - 1] += " " + sentence;
+                    return acc;
+                }, [])
+                : paras;
+
+            return `<div class="letter-box">
+                ${finalParas.map(p => `<p class="letter-p">${p}</p>`).join("\n")}
+            </div>`;
+            }
+
+
+
+        // -----------------------------
+        // AJAX helpers for /upload tools
+        // -----------------------------
+        function renderAiOutput(action, payload) {
+            const active = document.querySelector(".content-section.active");
+            if (!active) return;
+
+            const out = active.querySelector(".section-output");
+            const pre = active.querySelector(".section-output-pre");
+            if (!out || !pre) return;
+
+            out.style.display = "block";
+            pre.innerHTML = ""; // we will inject HTML now
+
+            // If error → show clean error box
+            if (typeof payload === "string") {
+            // Recommendation should look like a letter
+            if (action === "recommendation") {
+                pre.innerHTML = formatLetter(payload);
+                return;
+            }
+
+            // Concepts often come back as markdown bullets
+            if (action === "concepts" || action === "chapter" || action === "core_concepts") {
+                pre.innerHTML = formatMarkdownLite(payload);
+                return;
+            }
+
+            // default: readable paragraphs + wrapping
+            pre.innerHTML = `<div class="pretty-text">${formatMarkdownLite(payload)}</div>`;
+            return;
+            }
+
+
+            // If plain string → render as paragraph
+            if (typeof payload === "string") {
+                pre.innerHTML = `<p>${payload}</p>`;
+                return;
+            }
+
+            // Structured JSON rendering
+            for (const [key, value] of Object.entries(payload)) {
+                const title = key
+                    .replaceAll("_", " ")
+                    .replace(/\b\w/g, c => c.toUpperCase());
+
+                const section = document.createElement("div");
+                section.className = "ui-block";
+                section.innerHTML = `<h4>${title}</h4>`;
+
+                if (Array.isArray(value)) {
+
+                    // ✅ EXAMS: value = [{ student: 1, questions: [...] }, ...]
+                    if (key === "exams") {
+                        value.forEach(exam => {
+                            if (!exam || typeof exam !== "object" || !Array.isArray(exam.questions)) return;
+
+                            // Student container
+                            const studentBlock = document.createElement("div");
+                            studentBlock.className = "exam-student-block";
+
+                            const hdr = document.createElement("h5");
+                            hdr.className = "exam-student-title";
+                            hdr.textContent = `Student ${exam.student ?? ""}`.trim();
+                            studentBlock.appendChild(hdr);
+
+                            // Each student has their own UL
+                            const studentUl = document.createElement("ul");
+                            studentUl.className = "exam-question-list";
+
+                            exam.questions.forEach((q, idx) => {
+                                const li = document.createElement("li");
+                                li.className = "exam-question-item";
+
+                                li.innerHTML = `
+                                    <div class="q-title"><strong>Q${idx + 1}.</strong> ${q.question ?? "Question"}</div>
+                                    ${q.options ? `<div class="q-options"><strong>Options:</strong> ${q.options.join(", ")}</div>` : ""}
+                                   ${(() => {
+                                        const ans = (q.answer ?? "").toString();
+                                        const preview = ans.length > 160 ? ans.slice(0, 160) + "…" : ans;
+
+                                        return `
+                                            <div class="q-answer-preview"><strong>Answer:</strong> ${preview || "(no answer returned)"}</div>
+
+                                            <details class="q-answer">
+                                                <summary>Show full answer</summary>
+                                                <div class="q-answer-body">${ans || "(no answer returned)"}</div>
+                                            </details>
+                                        `;
+                                    })()}
+
+                                    <div class="q-meta">
+                                        <span><strong>Difficulty:</strong> ${q.difficulty ?? ""}</span>
+                                        <span><strong>Reference:</strong> ${q.reference ?? ""}</span>
+                                    </div>
+                                `;
+
+                                studentUl.appendChild(li);
+                            });
+
+                            studentBlock.appendChild(studentUl);
+                            section.appendChild(studentBlock);
+                        });
+
+                    } else {
+                        // ✅ NORMAL ARRAYS: chapter questions, concepts lists, etc.
+                        const ul = document.createElement("ul");
+
+                        value.forEach(item => {
+                            const li = document.createElement("li");
+
+                            if (item && typeof item === "object") {
+                                li.innerHTML = `
+                                    <strong>${item.question ?? "Item"}</strong><br>
+                                    ${item.options ? "<em>Options:</em> " + item.options.join(", ") + "<br>" : ""}
+                                    ${item.answer ? "<em>Answer:</em> " + item.answer + "<br>" : ""}
+                                    ${item.difficulty ? "<em>Difficulty:</em> " + item.difficulty + "<br>" : ""}
+                                    ${item.reference ? "<em>Reference:</em> " + item.reference : ""}
+                                `;
+                            } else {
+                                li.textContent = String(item);
+                            }
+
+                            ul.appendChild(li);
+                        });
+
+                        section.appendChild(ul);
+                    }
+
+                } else {
+                    section.innerHTML += `<p>${value}</p>`;
+                }
+
+                pre.appendChild(section);
+            }
+
+        }
+
+        function setHidden(form, name, value) {
+            let el = form.querySelector(`input[name="${name}"]`);
+            if (!el) {
+                el = document.createElement("input");
+                el.type = "hidden";
+                el.name = name;
+                form.appendChild(el);
+            }
+            el.value = value;
+        }
+
+
+        async function postFormAjax(formEl, extraFormData) {
+            // Guard: ensure we received a FORM element
+            if (!formEl || formEl.tagName !== "FORM") {
+                console.error("postFormAjax expected a FORM, got:", formEl);
+                throw new Error("Internal UI error: invalid form element.");
+            }
+
+            const fd = new FormData(formEl);
+            if (extraFormData) {
+                for (const [k, v] of extraFormData.entries()) fd.append(k, v);
+            }
+
+            const url = "/upload"; // FORCE correct endpoint
+            console.log("[postFormAjax] POST", url, "fields:", [...fd.keys()]);
+
+            const res = await fetch(url, {
+                method: "POST",
+                body: fd,
+                headers: { "X-Requested-With": "XMLHttpRequest" }
+            });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) {
+        throw new Error(data.error || `Request failed (status ${res.status}).`);
+    }
+    return data;
+}
+
+    (function () {
         const gradeFormEl = document.getElementById("gradeUploadForm");
         const resultsEl = document.getElementById("grade-results");
 
@@ -854,23 +1277,13 @@
         function updateRightPanel(section) {
             const card = document.getElementById("ai-right-panel");
 
-            // Only show for these sections:
-            const visibleFor = ["syllabus", "chapter", "resume", "exam"];
+            // ✅ Guard: if the panel does not exist, do nothing
+            if (!card) return;
 
-            if (visibleFor.includes(section)) {
-                card.style.display = "block";
-            } else {
-                card.style.display = "none";
-            }
+            const visibleFor = ["syllabus", "chapter", "resume", "exam"];
+            card.style.display = visibleFor.includes(section) ? "block" : "none";
         }
 
-
-
-
-
-    </script>
-    
-    <script>
     async function runAsyncGrade() {
         const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
         const ansFile = document.querySelector('input[name="answer_pdf"]').files[0];
@@ -916,12 +1329,24 @@
 
         }, 2000);
     }
+        async function submitChapterConcepts() {
+        const form = document.getElementById("chapterForm");
+        showProcessing();
+        try {
+            const data = await postFormAjax(form);
+            renderAiOutput("concepts", data.result ?? data);
+        } catch (e) {
+            renderAiOutput("concepts", { error: e.message });
+            alert(e.message);
+        } finally {
+            hideProcessing();
+        }
+    }
+
 
     </script>
 
 
-
-
 </body>
 
-</html>
+</html

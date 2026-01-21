@@ -15,9 +15,6 @@ Notes for beginners:
 """
 
 from __future__ import annotations
-from flask import session, request, redirect, url_for
-
-
 import os
 import re
 import json
@@ -91,7 +88,6 @@ def inject_i18n():
     }
 
 
-
 # Flask session + basic security settings
 app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "fallback_secret")
 app.config["SESSION_COOKIE_SECURE"] = False  # set True behind HTTPS in production
@@ -115,24 +111,32 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
+# Model names are configurable via env so deployments don't break when defaults change.
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
+
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
 claude_client = anthropic.Client(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY else None
 
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
 
+
 # -----------------------------------------------------------------------------
 # Database 
 # -----------------------------------------------------------------------------
 
+"""
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
+"""
 
-# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)
@@ -216,7 +220,7 @@ def extract_text_from_pdf_auto(pdf_path: str, force_ocr: bool = False) -> str:
         with open(pdf_path, "rb") as f:
             pdf_bytes = f.read()
 
-        model = genai.GenerativeModel("gemini-2.5-flash")
+        model = genai.GenerativeModel(GEMINI_MODEL)
         response = model.generate_content(
             [
                 "Extract visible text from this exam paper. Do not summarize.",
@@ -282,8 +286,6 @@ def _preprocess_exam_text(raw: str) -> str:
     t = re.sub(r"\n{3,}", "\n\n", t)
 
     return t.strip()
-
-
 
 
 def _clean_symbols(text: str) -> str:
@@ -461,8 +463,6 @@ def match_student_text(
         return full_student_text, "full-fallback"
 
     return "", "no-match"
-
-
 
 
 def _fallback_split_numbered_blocks(t: str) -> List[Dict[str, str]]:
@@ -697,7 +697,6 @@ def build_student_sequential_blocks(full_student_text: str) -> Dict[int, str]:
     return out
 
 
-
 def process_grading(
     key_source: str,
     ans_source: str,
@@ -860,7 +859,6 @@ def process_grading(
     return results, avg, key_qas_dict
 
 
-
 # -----------------------------------------------------------------------------
 # Weighting
 # -----------------------------------------------------------------------------
@@ -955,40 +953,72 @@ def extract_text_from_ppt_with_slides(filepath: str):
 
 
 def query_openai_api(prompt: str):
+    """Call OpenAI for the upload-utility features (questions/concepts/syllabus/letters/exams)."""
     if not openai_client:
         return {"error": "OpenAI API key not configured."}
-    resp = openai_client.chat.completions.create(
-        model="gpt-4-turbo",
-        messages=[
-            {"role": "system", "content": "You are an experienced instructor."},
-            {"role": "user", "content": prompt},
-        ],
-    )
-    content = (resp.choices[0].message.content or "").strip()
-    # If the model returns JSON-as-text, try to parse it.
+
     try:
-        return json.loads(content)
-    except Exception:
-        return content
+        resp = openai_client.chat.completions.create(
+            model=OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": "You are an experienced instructor."},
+                {"role": "user", "content": prompt},
+            ],
+        )
+        content = (resp.choices[0].message.content or "").strip()
+
+        # Strip markdown code fences if the model wraps JSON
+        if content.startswith("```json"):
+            content = content.replace("```json", "").replace("```", "").strip()
+        elif content.startswith("```"):
+            content = content.replace("```", "").strip()
+
+        # Try JSON parse, else return plain text
+        try:
+            return json.loads(content)
+        except Exception:
+            return content
+
+    except Exception as e:
+        print(f"[ERROR] OpenAI call failed: {e}\n{traceback.format_exc()}")
+        return {"error": f"OpenAI call failed: {str(e)}"}
 
 
 def query_claude_api(prompt: str):
+    """Call Anthropic Claude for the upload-utility features."""
     if not claude_client:
         return {"error": "Anthropic API key not configured."}
-    resp = claude_client.messages.create(
-        model="claude-3-5-sonnet-20241022",
-        max_tokens=4096,
-        messages=[{"role": "user", "content": prompt}],
-    )
-    combined = "".join(getattr(b, "text", "") for b in getattr(resp, "content", [])).strip()
+
     try:
-        return json.loads(combined)
-    except Exception:
-        return combined
+        model = (os.getenv("CLAUDE_MODEL") or CLAUDE_MODEL or "").strip()
+        print("CLAUDE_MODEL repr:", repr(model)) 
+
+        resp = claude_client.messages.create(
+            model=model,            
+            max_tokens=4096,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        combined = "".join(getattr(b, "text", "") for b in getattr(resp, "content", [])).strip()
+
+        if combined.startswith("```json"):
+            combined = combined.replace("```json", "").replace("```", "").strip()
+        elif combined.startswith("```"):
+            combined = combined.replace("```", "").strip()
+
+        try:
+            return json.loads(combined)
+        except Exception:
+            return combined
+
+    except Exception as e:
+        print(f"[ERROR] Claude call failed: {e}\n{traceback.format_exc()}")
+        return {"error": f"Claude call failed: {str(e)}"}
 
 
 def generate_prompt(content: str, task: str, **kwargs) -> str:
     """Build prompts for upload features."""
+    task = (task or "").strip().lower()
+
     if task == "concepts":
         return (
             "Identify core concepts from the content. Output 10–15 concise bullet points, each "
@@ -1004,16 +1034,88 @@ def generate_prompt(content: str, task: str, **kwargs) -> str:
         return (
             f"Generate {total} questions from the provided content.\n"
             f"- MCQs: {mcq}\n- True/False: {tf}\n- Other: {other}\n"
-            "For each question include: question text, correct answer, difficulty, and a reference page/slide.\n\n"
+            "Return JSON ONLY with this schema:\n"
+            "{ 'questions': [ { 'type': 'MCQ|TF|Short|Long', 'question': '...', 'options': ['A..','B..','C..','D..'] (MCQ only), 'answer': '...', 'difficulty': 'easy|medium|hard', 'reference': 'page/slide ...' } ] }\n\n"
             "Content:\n"
+            + content
+        )
+
+    if task == "structured":
+        # syllabus enhancement
+        return (
+            "Analyze the following course syllabus and provide structured recommendations.\n"
+            "Return JSON ONLY with this schema:\n"
+            "{\n"
+            "  'course_overview': '...',\n"
+            "  'learning_objectives': ['...'],\n"
+            "  'pacing_suggestions': ['...'],\n"
+            "  'assessment_alignment': ['...'],\n"
+            "  'clarity_improvements': ['...'],\n"
+            "  'red_flags_or_gaps': ['...']\n"
+            "}\n\n"
+            "Syllabus Content:\n"
             + content
         )
 
     if task == "recommendation":
         today = datetime.today().strftime("%B %d, %Y")
+        recommender_name = (kwargs.get("recommender_name") or "").strip()
+        position = (kwargs.get("position") or "").strip()
+        email = (kwargs.get("email") or "").strip()
+
+        header = "To Whom It May Concern,"
+        if recommender_name and position and email:
+            header = (
+                f"{recommender_name}\n{position}\n{email}\n\nTo Whom It May Concern,"
+            )
+
         return (
-            "Write a formal 'To Whom It May Concern' recommendation letter.\n"
+            "Write a formal, professional recommendation letter for the candidate described in the resume below.\n"
             f"Date: {today}\n\n"
+            f"Use this recommender header exactly:\n{header}\n\n"
+            "Include: relationship/context, 3–5 strengths with examples, and a strong closing endorsement.\n"
+            "Formatting requirements (must follow exactly):\n"
+            """
+                - Use plain text only.
+                - Preserve line breaks.
+                - The top block must be exactly:
+
+                <Recommender Name>
+                <Recommender Role/Title or leave blank>
+                <Recommender Email or leave blank>
+                <Month DD, YYYY>
+
+                (blank line)
+                To Whom It May Concern,
+
+                (blank line)
+                <Body paragraphs separated by a blank line>
+
+                (blank line)
+                Sincerely,
+
+                <Recommender Name only>
+
+                Rules:
+                - Do not put name/title/email on the same line.
+                - "Sincerely," must be on its own line.
+                - The final line must contain only the recommender name (no title, no email).
+
+            """
+            "Resume Content:\n"
+            + content
+        )
+
+    if task == "exam_papers":
+        num_students = int(kwargs.get("num_students", 1))
+        qps = int(kwargs.get("questions_per_student", 5))
+        return (
+            f"Generate {num_students} unique exam papers.\n"
+            f"Each exam must contain exactly {qps} questions.\n"
+            "The exams should be equivalent difficulty and cover the same key topics.\n"
+            "Return JSON ONLY with this schema:\n"
+            "{ 'exams': [ { 'student': 1, 'questions': [ { 'question': '...', 'answer': '...', 'difficulty': 'easy|medium|hard', 'reference': 'slide/page ...' } ] } ] }\n\n"
+            "Lecture Content:\n"
             + content
         )
 
@@ -1263,7 +1365,6 @@ def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = 
                     pass
 
 
-
 @app.route("/grade_async", methods=["POST"])
 @login_required
 def grade_async():
@@ -1401,23 +1502,113 @@ def task_result(task_id: str):
 @app.route("/upload", methods=["POST"])
 @login_required
 def upload_file():
+    """Handle non-grading upload utilities (syllabus/chapter/resume/exam)."""
+    action = (request.form.get("action") or "").strip().lower()
+    ai_model = (request.form.get("ai_model") or "openai").strip().lower()
+    is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes["application/json"] >= request.accept_mimetypes["text/html"]
+
+    def run_ai(prompt: str):
+        return query_claude_api(prompt) if ai_model == "claude" else query_openai_api(prompt)
+
+    # ----------------------------
+    # Exam papers: multi PPT/PPTX
+    # ----------------------------
+    if action == "exam_papers":
+        files = request.files.getlist("exam_files")
+        if not files or all((not f or not f.filename) for f in files):
+            msg = "No files selected. Please upload at least one PPT/PPTX or PDF."
+            if is_ajax:
+                return jsonify({"action": action, "error": msg}), 400
+            flash(msg, "error")
+            return redirect(url_for("dashboard"))
+
+        extracted_texts: List[str] = []
+        for f in files:
+            if not f or not f.filename:
+                continue
+            if not allowed_file(f.filename):
+                continue
+
+            fname = secure_filename(f.filename)
+            path = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{fname}")
+            try:
+                f.save(path)
+                ext = fname.rsplit(".", 1)[1].lower()
+                if ext in {"ppt", "pptx"}:
+                    txt, _ = extract_text_from_ppt_with_slides(path)
+                elif ext == "pdf":
+                    txt = extract_text_from_pdf_auto(path)
+                elif ext == "docx":
+                    txt = extract_text_from_docx(path)
+                elif ext == "txt":
+                    txt = extract_text_from_txt(path)
+                else:
+                    txt = ""
+                if txt and txt.strip():
+                    extracted_texts.append(txt)
+            except Exception as e:
+                print(f"[ERROR] exam upload processing failed for {fname}: {e}\n{traceback.format_exc()}")
+                continue
+
+        if not extracted_texts:
+            msg = "Could not extract text from the uploaded files."
+            if is_ajax:
+                return jsonify({"action": action, "error": msg}), 400
+            flash(msg, "error")
+            return redirect(url_for("dashboard"))
+
+        combined = "\n\n".join(extracted_texts)
+
+        try:
+            num_students = int(request.form.get("num_students", 1))
+            questions_per_student = int(request.form.get("questions_per_student", 5))
+        except Exception:
+            msg = "Please enter valid numbers for students and questions per student."
+            if is_ajax:
+                return jsonify({"action": action, "error": msg}), 400
+            flash(msg, "error")
+            return redirect(url_for("dashboard"))
+
+        prompt = generate_prompt(
+            combined,
+            "exam_papers",
+            num_students=num_students,
+            questions_per_student=questions_per_student,
+        )
+
+        result = run_ai(prompt)
+        payload = {"action": action, "result": result}
+        if is_ajax:
+            return jsonify(payload)
+
+        # Non-AJAX fallback: render the dashboard with a visible result block
+        return render_template("index.html", success=json.dumps(payload, indent=2))
+
+    # ----------------------------
+    # Single-file tasks
+    # ----------------------------
     file = (
         request.files.get("file")
-        or request.files.get("exam_files")
         or request.files.get("chapter_file")
         or request.files.get("resume_file")
     )
 
     if not file or not file.filename:
-        flash("No file selected. Please upload a valid file.", "error")
+        msg = "No file selected. Please upload a valid file."
+        if is_ajax:
+            return jsonify({"action": action, "error": msg}), 400
+        flash(msg, "error")
         return redirect(url_for("dashboard"))
 
     if not allowed_file(file.filename):
-        flash("Unsupported file type.", "error")
+        msg = "Unsupported file type."
+        if is_ajax:
+            return jsonify({"action": action, "error": msg}), 400
+        flash(msg, "error")
         return redirect(url_for("dashboard"))
 
     filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+    filepath = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{filename}")
     file.save(filepath)
 
     try:
@@ -1433,32 +1624,53 @@ def upload_file():
         else:
             content = ""
 
-        if not content.strip():
-            flash("The uploaded file appears to be empty or unsupported.", "error")
+        if not content or not str(content).strip():
+            msg = "The uploaded file appears to be empty or unsupported."
+            if is_ajax:
+                return jsonify({"action": action, "error": msg}), 400
+            flash(msg, "error")
             return redirect(url_for("dashboard"))
 
-        action = (request.form.get("action") or "").strip().lower()
-        ai_model = (request.form.get("ai_model") or "openai").strip().lower()
-
-        prompt = generate_prompt(
-            content,
-            action,
-            total_questions=request.form.get("total_questions", 20),
-            mcq_count=request.form.get("mcq_count", 5),
-            tf_count=request.form.get("tf_count", 5),
-            others_count=request.form.get("others_count", 10),
-        )
-
-        if ai_model == "claude":
-            result = query_claude_api(prompt)
+        # Build prompt per action
+        if action == "questions":
+            prompt = generate_prompt(
+                content,
+                "questions",
+                total_questions=int(request.form.get("total_questions", 20)),
+                mcq_count=int(request.form.get("mcq_count", 5)),
+                tf_count=int(request.form.get("tf_count", 5)),
+                others_count=int(request.form.get("others_count", 10)),
+            )
+        elif action == "concepts":
+            prompt = generate_prompt(content, "concepts")
+        elif action == "structured":
+            prompt = generate_prompt(content, "structured")
+        elif action == "recommendation":
+            prompt = generate_prompt(
+                content,
+                "recommendation",
+                recommender_name=request.form.get("recommender_name", ""),
+                position=request.form.get("position", ""),
+                email=request.form.get("email", ""),
+            )
         else:
-            result = query_openai_api(prompt)
+            msg = f"Invalid action: {action}"
+            if is_ajax:
+                return jsonify({"action": action, "error": msg}), 400
+            flash(msg, "error")
+            return redirect(url_for("dashboard"))
 
-        # Render on dashboard or return JSON (depending on your templates)
-        return jsonify({"action": action, "result": result})
+        result = run_ai(prompt)
+        payload = {"action": action, "result": result}
+        if is_ajax:
+            return jsonify(payload)
+
+        return render_template("index.html", success=json.dumps(payload, indent=2))
 
     finally:
-        # keep uploads if you want a history; otherwise delete here
+        # Keep uploads if you want history; otherwise delete:
+        # try: os.remove(filepath)
+        # except Exception: pass
         pass
 
 
