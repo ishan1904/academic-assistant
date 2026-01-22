@@ -528,6 +528,8 @@
                 <p>{{ t('chapter_upload_desc') }}</p>
                 <form id="chapterForm" action="/upload" method="POST" enctype="multipart/form-data">
                     <label for="chapter_file">{{ t('choose_pdf_ppt') }}</label>
+                    <input type="hidden" name="action" id="chapter_action" value="">
+
                     <input type="file" id="chapter_file" name="chapter_file" accept=".pdf, .ppt, .pptx" required>
 
                     <label for="chapter_ai_model">{{ t('select_ai_model') }}</label>
@@ -541,7 +543,7 @@
                         <button type="button" onclick="submitChapterConcepts()">{{ t('extract_core_concepts') }}</button>
                     </div>
                 </form>
-                <div id="chapterSoftWarning" class="soft-warning" style="display:none;"></div>
+                
 
 
                 <div class="section-output final-output" style="display:none; margin-top:16px;">
@@ -1290,8 +1292,6 @@
         });
         })();
 
-        document.getElementById("chapter_file")?.addEventListener("change", evaluateChapterFileSoftWarning);
-
 
         function updateRightPanel(section) {
             const card = document.getElementById("ai-right-panel");
@@ -1348,10 +1348,21 @@
 
         }, 2000);
     }
-        evaluateChapterFileSoftWarning();
+        
 
         async function submitChapterConcepts() {
         const form = document.getElementById("chapterForm");
+
+        // ✅ ensure action is sent
+        let actionInput = form.querySelector('input[name="action"]');
+        if (!actionInput) {
+            actionInput = document.createElement("input");
+            actionInput.type = "hidden";
+            actionInput.name = "action";
+            form.appendChild(actionInput);
+        }
+        actionInput.value = "concepts"; // MUST match Flask
+
         showProcessing();
         try {
             const data = await postFormAjax(form);
@@ -1362,7 +1373,8 @@
         } finally {
             hideProcessing();
         }
-    }
+        }
+
 
         function formatMB(bytes) {
         return (bytes / (1024 * 1024)).toFixed(1);
