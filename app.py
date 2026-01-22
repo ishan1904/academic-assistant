@@ -133,7 +133,7 @@ GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
 # Model names are configurable via env so deployments don't break when defaults change.
 OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-3-5-sonnet-20241022")
+CLAUDE_MODEL = os.getenv("CLAUDE_MODEL", "claude-sonnet-4-5-20250929")
 GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-2.5-flash")
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY) if OPENAI_API_KEY else None
