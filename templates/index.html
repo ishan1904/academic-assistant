@@ -5,6 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t("app_title") }}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='favicon.png') }}">
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -1348,7 +1349,7 @@
         }, 2000);
     }
         evaluateChapterFileSoftWarning();
-        
+
         async function submitChapterConcepts() {
         const form = document.getElementById("chapterForm");
         showProcessing();
