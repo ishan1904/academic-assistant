@@ -1,17 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-Grading Agent (Flask)
+AI Academic Assistant (Flask)
 
-This app supports:
-- User auth (signup/login/logout) with a simple SQLite database
-- Grading (sync + async) by comparing an answer key PDF to a student's PDF
-- PDF extraction with a fast typed-text path (PyPDF2) and an OCR fallback (Gemini)
-- Basic “upload utilities” (question generation, concepts, recommendation letters, exam papers)
+This application provides a set of AI-assisted academic utilities through a
+Flask web interface. It is designed to work with real-world, imperfect inputs
+such as PDFs and slide decks, and focuses on reliability and clarity rather
+than purely model-driven output.
 
-Notes for beginners:
-- The “key” in this code is the correct answer sheet.
-- The “answer” is the student's submission.
-- Most endpoints require login (see @login_required).
+Core features include:
+
+- User authentication (signup, login, logout) backed by a simple SQLite database
+- AI-powered grading:
+  - Synchronous and asynchronous grading workflows
+  - Comparison of a key (answer key PDF) against student submissions (PDF)
+  - Robust text extraction using PyPDF2 with OCR fallback for scanned documents
+- Chapter-level academic assistance:
+  - Core concept extraction from lecture PDFs or PPT/PPTX files
+  - Question generation based on uploaded chapter material
+- Exam paper generation:
+  - Supports PDF and PPT/PPTX inputs
+  - Generates per-student question sets with structured output
+- Recommendation letter generation:
+  - Produces professional, role-agnostic recommendation letters from uploaded resumes
+
+Design notes:
+- All AI features are accessed through a unified upload endpoint with explicit actions.
+- Most routes require authentication (see @login_required).
+- The system prioritizes predictable output formats and defensive handling of
+  large or noisy documents.
+
+Terminology:
+- “Key” refers to the correct answer sheet used for grading.
+- “Answer” refers to the student’s submitted response.
 """
 
 from __future__ import annotations
@@ -122,21 +142,28 @@ claude_client = anthropic.Client(api_key=ANTHROPIC_API_KEY) if ANTHROPIC_API_KEY
 if GOOGLE_API_KEY:
     genai.configure(api_key=GOOGLE_API_KEY)
 
+# -------------------------------------------------------------------
+# Database configuration
+# -------------------------------------------------------------------
 
-# -----------------------------------------------------------------------------
-# Database 
-# -----------------------------------------------------------------------------
-
-"""
+# Use DATABASE_URL when running in a deployed environment (PostgreSQL)
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+# SQLAlchemy expects "postgresql://" instead of "postgres://"
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
+    
 
 app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-"""
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+# -------------------------------------------------------------------
+# Local development note:
+# When running locally, comment out the PostgreSQL configuration above
+# and enable the SQLite connection below instead.
+# -------------------------------------------------------------------
+
+# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
+
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 
 db = SQLAlchemy(app)

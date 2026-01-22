@@ -394,6 +394,19 @@
         .letter-p { margin: 10px 0; }
         .pretty-text { font-size: 16px; line-height: 1.6; }
 
+        .soft-warning{
+        margin-top: 8px;
+        padding: 10px 12px;
+        border: 1px solid #f0c36d;
+        background: #fff8e5;
+        color: #5a4400;
+        border-radius: 8px;
+        font-size: 14px;
+        line-height: 1.4;
+        }
+        .soft-warning strong{ font-weight: 600; }
+
+
 
 
     </style>
@@ -527,6 +540,8 @@
                         <button type="button" onclick="submitChapterConcepts()">{{ t('extract_core_concepts') }}</button>
                     </div>
                 </form>
+                <div id="chapterSoftWarning" class="soft-warning" style="display:none;"></div>
+
 
                 <div class="section-output final-output" style="display:none; margin-top:16px;">
                     <div class="section-title">Output</div>
@@ -1274,6 +1289,9 @@
         });
         })();
 
+        document.getElementById("chapter_file")?.addEventListener("change", evaluateChapterFileSoftWarning);
+
+
         function updateRightPanel(section) {
             const card = document.getElementById("ai-right-panel");
 
@@ -1329,6 +1347,8 @@
 
         }, 2000);
     }
+        evaluateChapterFileSoftWarning();
+        
         async function submitChapterConcepts() {
         const form = document.getElementById("chapterForm");
         showProcessing();
@@ -1342,6 +1362,55 @@
             hideProcessing();
         }
     }
+
+        function formatMB(bytes) {
+        return (bytes / (1024 * 1024)).toFixed(1);
+        }
+
+        function showSoftWarning(el, msg) {
+        if (!el) return;
+        el.innerHTML = msg;
+        el.style.display = "block";
+        }
+
+        function hideSoftWarning(el) {
+        if (!el) return;
+        el.innerHTML = "";
+        el.style.display = "none";
+        }
+
+        // Tune these safely
+        const CHAPTER_WARN_MB = 10;   // warn above 10MB
+        const CHAPTER_WARN_MB_HARD = 20; // stronger message above 20MB
+
+        function evaluateChapterFileSoftWarning() {
+        const input = document.getElementById("chapter_file");
+        const warnEl = document.getElementById("chapterSoftWarning");
+        if (!input || !warnEl) return;
+
+        const file = input.files && input.files[0];
+        if (!file) {
+            hideSoftWarning(warnEl);
+            return;
+        }
+
+        const mb = file.size / (1024 * 1024);
+
+        if (mb >= CHAPTER_WARN_MB_HARD) {
+            showSoftWarning(
+            warnEl,
+            `<strong>Heads up:</strong> This file is ${formatMB(file.size)} MB. Large chapters may take longer, time out, or produce partial results. For best results, try a smaller module or split the PDF.`
+            );
+        } else if (mb >= CHAPTER_WARN_MB) {
+            showSoftWarning(
+            warnEl,
+            `<strong>Note:</strong> This file is ${formatMB(file.size)} MB. Processing may be slow and outputs may be less reliable for very large chapters.`
+            );
+        } else {
+            hideSoftWarning(warnEl);
+        }
+        }
+
 
 
     </script>
