@@ -1,7 +1,13 @@
 from groq import Groq
 import os, json, re
+from openai import OpenAI
+import anthropic
+
 
 client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+claude_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+
 
 import json, re
 
@@ -144,7 +150,7 @@ def normalize_score(score):
 
 
 
-def grade_submission(rubric, answer, strictness="normal"):
+def grade_with_groq(rubric, answer, strictness="normal"):
     """
     Hybrid grader:
     - Detects MCQs, short, and long answers automatically.
@@ -153,6 +159,8 @@ def grade_submission(rubric, answer, strictness="normal"):
     """
 
     import re, json
+    print("[GRADING] using groq")
+
 
     rubric = (rubric or "").strip()
     answer = (answer or "").strip()
@@ -283,3 +291,183 @@ def grade_submission(rubric, answer, strictness="normal"):
 
     except Exception as e:
         return {"score": 0, "feedback": f"Grader exception: {e}", "provider": "groq"}
+
+def grade_with_openai(rubric, answer, strictness="normal"):
+    rubric = (rubric or "").strip()
+    answer = (answer or "").strip()
+
+    print("[GRADING] using openai")
+
+
+    if strictness == "lenient":
+        grading_instructions = (
+            "Grade generously but responsibly. Focus on conceptual correctness. "
+            "Do not penalize for minor wording, formatting, or rounding differences."
+        )
+    elif strictness == "strict":
+        grading_instructions = (
+            "Grade conservatively and with high academic standards. "
+            "Full credit requires precise terminology and complete reasoning."
+        )
+    else:
+        grading_instructions = (
+            "Grade fairly. Reward accurate understanding and correct reasoning, "
+            "but deduct for factual or conceptual errors."
+        )
+
+    msg = (
+        "You are an AI teaching assistant grading student answers.\n"
+        f"{grading_instructions}\n"
+        "Provide feedback in 2–4 sentences.\n"
+        "Return ONLY JSON (no markdown) like:\n"
+        '{"score": <0-10>, "feedback": "<text>"}\n\n'
+        f"Rubric (Correct Answer): {rubric}\n\n"
+        f"Student Answer: {answer}\n"
+    )
+
+    resp = openai_client.chat.completions.create(
+        model=os.getenv("OPENAI_GRADING_MODEL", "gpt-4o-mini"),
+        temperature=0,
+        messages=[
+            {"role": "system", "content": "You must output only valid JSON."},
+            {"role": "user", "content": msg},
+        ],
+    )
+
+    raw_text = (resp.choices[0].message.content or "").strip()
+
+    # Use your forgiving JSON extractor if it exists
+    parsed = None
+    try:
+        parsed = json.loads(raw_text)
+    except Exception:
+        parsed = None
+
+    if not parsed or not isinstance(parsed, dict):
+        # try your extractor (it returns dict of QAs normally, but for grading we just want score/feedback)
+        # safest: regex capture first JSON object
+        m = re.search(r"\{[\s\S]*?\}", raw_text)
+        if m:
+            try:
+                parsed = json.loads(m.group(0))
+            except Exception:
+                parsed = None
+
+    if not parsed or not isinstance(parsed, dict):
+        return {"score": 0, "feedback": raw_text, "provider": "openai"}
+
+    parsed["provider"] = "openai"
+    parsed["score"] = max(0, min(10, normalize_score(parsed.get("score", 0))))
+    fb = parsed.get("feedback") or parsed.get("evaluation") or ""
+    parsed["feedback"] = str(fb).strip()
+    return parsed
+
+
+def grade_with_claude(rubric, answer, strictness="normal"):
+    import re, json
+    print("[GRADING] using claude")
+
+
+
+    rubric = (rubric or "").strip()
+    answer = (answer or "").strip()
+
+    if strictness == "lenient":
+        grading_instructions = (
+            "Grade generously but responsibly. Focus on conceptual correctness. "
+            "Do not penalize for minor wording, formatting, or rounding differences."
+        )
+    elif strictness == "strict":
+        grading_instructions = (
+            "Grade conservatively and with high academic standards. "
+            "Full credit requires precise terminology and complete reasoning."
+        )
+    else:
+        grading_instructions = (
+            "Grade fairly. Reward accurate understanding and correct reasoning, "
+            "but deduct for factual or conceptual errors."
+        )
+
+    msg = (
+        "You are an AI teaching assistant grading student answers.\n"
+        f"{grading_instructions}\n"
+        "Provide feedback in 2–4 sentences.\n"
+        "Return ONLY JSON (no markdown) like:\n"
+        '{"score": <0-10>, "feedback": "<text>"}\n\n'
+        f"Rubric (Correct Answer): {rubric}\n\n"
+        f"Student Answer: {answer}\n"
+    )
+
+    resp = claude_client.messages.create(
+        model=os.getenv("CLAUDE_GRADING_MODEL", "claude-3-5-sonnet-20241022"),
+        max_tokens=800,
+        messages=[{"role": "user", "content": msg}],
+    )
+
+    # Claude returns list blocks
+    if hasattr(resp, "content") and isinstance(resp.content, list):
+        raw_text = "".join(getattr(b, "text", "") for b in resp.content).strip()
+    else:
+        raw_text = str(getattr(resp, "content", "")).strip()
+
+    parsed = extract_json(raw_text) if "extract_json" in globals() else None
+
+    if not parsed:
+        try:
+            parsed = json.loads(raw_text)
+        except Exception:
+            cleaned = raw_text.replace("```json", "").replace("```", "")
+            cleaned = re.sub(r"(?<!\\)'", '"', cleaned)
+            cleaned = re.sub(r",\s*([}\]])", r"\1", cleaned)
+            m = re.search(r"\{[\s\S]*?\}", cleaned)
+            if m:
+                try:
+                    parsed = json.loads(m.group(0))
+                except Exception:
+                    parsed = None
+
+    if not parsed or not isinstance(parsed, dict):
+        return {"score": 0, "feedback": raw_text, "provider": "claude"}
+
+    parsed["provider"] = "claude"
+    parsed["score"] = max(0, min(10, normalize_score(parsed.get("score", 0))))
+    fb = parsed.get("feedback") or parsed.get("evaluation") or ""
+    if not isinstance(fb, str):
+        fb = str(fb)
+    parsed["feedback"] = fb.strip()
+    return parsed
+
+def grade_submission(rubric, answer, strictness="normal", provider_preference="groq"):
+    """
+    Router:
+    - User can choose groq/openai/claude.
+    - If user chooses groq, fallback to openai automatically on failure.
+    """
+    provider_preference = (provider_preference or "groq").strip().lower()
+
+    if provider_preference == "groq":
+        order = ["groq", "openai"]   # ✅ your requested fallback
+    elif provider_preference == "openai":
+        order = ["openai"]
+    elif provider_preference == "claude":
+        order = ["claude"]
+    else:
+        order = ["groq", "openai"]
+
+    print(f"[GRADING] provider_preference={provider_preference} order={order}")
+
+
+    last_err = None
+    for p in order:
+        try:
+            if p == "groq":
+                return grade_with_groq(rubric, answer, strictness=strictness)
+            if p == "openai":
+                return grade_with_openai(rubric, answer, strictness=strictness)
+            if p == "claude":
+                return grade_with_claude(rubric, answer, strictness=strictness)
+        except Exception as e:
+            last_err = e
+            continue
+
+    return {"score": 0, "feedback": f"All graders failed: {last_err}", "provider": "none"}

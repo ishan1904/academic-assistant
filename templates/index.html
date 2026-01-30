@@ -610,6 +610,12 @@
 
                 <label>{{ t('answer_sheet_pdf') }}</label>
                 <input type="file" name="answer_pdf" accept="application/pdf" required>
+                <label for="grading_provider">Grading model</label>
+                    <select name="grading_provider" id="grading_provider">
+                        <option value="groq" selected>Groq</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="claude">Claude</option>
+                    </select>
 
                 <div class="button-group">
                     <!-- Async OCR grading (Gemini OCR + Groq formatting + Groq grading) -->
@@ -1315,6 +1321,10 @@
         const formData = new FormData();
         formData.append("key_pdf", keyFile);
         formData.append("ans_pdf", ansFile);
+
+        const provider = document.getElementById("grading_provider")?.value || "groq";
+        formData.set("grading_provider", provider);
+
 
         showProcessing();
 

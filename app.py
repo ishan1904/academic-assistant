@@ -731,6 +731,7 @@ def process_grading(
     from_text: bool = False,
     strictness: str = "normal",
     force_ocr: bool = False,
+    grading_provider: str = "groq",
 ) -> Tuple[Dict[int, Dict[str, Any]], float, Dict[int, Dict[str, str]]]:
     """
     Main grading pipeline.
@@ -860,7 +861,7 @@ def process_grading(
                     f"[ANSWER BLOCK]\n{student_for_grading}\n\n"
                     f"[EXTRA CONTEXT]\n{student_context}"
                 )
-                graded = grade_submission(rubric, student_input, strictness)
+                graded = grade_submission(rubric, student_input, strictness, provider_preference=grading_provider)
                 score = float(graded.get("score", 0) or 0)
 
         total_score += score
@@ -1265,13 +1266,15 @@ def grade_run():
         ans_pdf.save(ans_path)
 
         force_ocr = "force_ocr" in request.form
+        grading_provider = (request.form.get("grading_provider") or "groq").strip().lower()
+
 
         # Extract once, then grade from text (lets us reuse extraction in async too)
         key_text = extract_text_from_pdf_auto(key_path)
         ans_text = extract_text_from_pdf_auto(ans_path, force_ocr=force_ocr)
 
         results, avg_score, key_qas = process_grading(
-            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr
+            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr, grading_provider=grading_provider
         )
 
         # Weighting (optional)
@@ -1319,7 +1322,7 @@ def grade_run():
 TASKS: Dict[str, Dict[str, Any]] = {}
 
 
-def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = False):
+def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = False, grading_provider: str = "groq"):
     print(f"[INFO] async worker started: {task_id} (force_ocr={force_ocr})")
 
     # --- NEW: timestamps for timeout + better status reporting ---
@@ -1348,7 +1351,7 @@ def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = 
         TASKS[task_id]["status"] = "Grading (parsing questions)"
         # process_grading already uses your robust splitters, preprocess, etc.
         results, avg_score, key_qas = process_grading(
-            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr
+            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr, grading_provider=grading_provider,
         )
 
         # --- NEW: cap runaway parse explosions ---
@@ -1399,6 +1402,7 @@ def grade_async():
     ans_file = request.files.get("ans_pdf") or request.files.get("answer_pdf")
     if not key_file or not ans_file:
         return jsonify({"error": t("upload_both")}), 400
+    
 
     task_id = str(uuid.uuid4())
     key_path = os.path.join(app.config["TEMP_FOLDER"], f"{task_id}_key.pdf")
@@ -1420,9 +1424,12 @@ def grade_async():
         "phase": "start",
     }
 
+    grading_provider = (request.form.get("grading_provider") or "groq").strip().lower()
+
+
     threading.Thread(
         target=_async_worker,
-        args=(task_id, key_path, ans_path, force_ocr),
+        args=(task_id, key_path, ans_path, force_ocr, grading_provider),
         daemon=True
     ).start()
 
