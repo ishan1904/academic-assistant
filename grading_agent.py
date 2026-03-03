@@ -3,10 +3,36 @@ import os, json, re
 from openai import OpenAI
 import anthropic
 
+_groq_client = None
+_openai_client = None
+_claude_client = None
 
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
-openai_client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-claude_client = anthropic.Client(api_key=os.getenv("ANTHROPIC_API_KEY"))
+def get_groq_client():
+    global _groq_client
+    if _groq_client is None:
+        key = os.getenv("GROQ_API_KEY")
+        if not key:
+            return None
+        _groq_client = Groq(api_key=key)
+    return _groq_client
+
+def get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        key = os.getenv("OPENAI_API_KEY")
+        if not key:
+            return None
+        _openai_client = OpenAI(api_key=key)
+    return _openai_client
+
+def get_claude_client():
+    global _claude_client
+    if _claude_client is None:
+        key = os.getenv("ANTHROPIC_API_KEY")
+        if not key:
+            return None
+        _claude_client = anthropic.Client(api_key=key)
+    return _claude_client
 
 
 import json, re
@@ -86,9 +112,10 @@ def extract_json_ai(text: str):
     Uses the Groq LLaMA 3.1 model to extract structured Q/A pairs
     when regex fails (used by robust_split_into_qas fallback).
     """
-    from groq import Groq
-
-    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+    client = get_groq_client()
+    if not client:
+        return []
+   
 
     prompt = f"""
     You are a strict JSON generator. Extract all distinct question–answer pairs
@@ -157,6 +184,9 @@ def grade_with_groq(rubric, answer, strictness="normal"):
     - Auto-scores MCQs.
     - Uses Groq for short and long answers with adjusted strictness.
     """
+    client = get_groq_client()
+    if not client:
+        raise RuntimeError("GROQ_API_KEY missing")
 
     import re, json
     print("[GRADING] using groq")
@@ -297,6 +327,9 @@ def grade_with_openai(rubric, answer, strictness="normal"):
     answer = (answer or "").strip()
 
     print("[GRADING] using openai")
+    openai_client = get_openai_client()
+    if not openai_client:
+        raise RuntimeError("OPENAI_API_KEY missing")
 
 
     if strictness == "lenient":
@@ -366,6 +399,10 @@ def grade_with_openai(rubric, answer, strictness="normal"):
 def grade_with_claude(rubric, answer, strictness="normal"):
     import re, json
     print("[GRADING] using claude")
+
+    claude_client = get_claude_client()
+    if not claude_client:
+        raise RuntimeError("ANTHROPIC_API_KEY missing")
 
 
 
@@ -443,6 +480,8 @@ def grade_submission(rubric, answer, strictness="normal", provider_preference="g
     - User can choose groq/openai/claude.
     - If user chooses groq, fallback to openai automatically on failure.
     """
+    
+
     provider_preference = (provider_preference or "groq").strip().lower()
 
     if provider_preference == "groq":

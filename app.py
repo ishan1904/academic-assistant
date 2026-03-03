@@ -47,6 +47,10 @@ from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Dict, List, Tuple, Optional
 from translations import get_translation
+from core.parsing import split_into_qas_by_qid
+from core.docstore import init_db, put_doc, get_role, list_qids, get_qa
+from core.cache import init_cache, get_cached, set_cached
+from core.grading import grade_one
 
 from dotenv import load_dotenv
 from flask import (
@@ -77,6 +81,9 @@ from openai import OpenAI
 
 import google.generativeai as genai
 
+
+init_db()
+init_cache()
 
 # -----------------------------------------------------------------------------
 # App setup
@@ -146,26 +153,15 @@ if GOOGLE_API_KEY:
 # Database configuration
 # -------------------------------------------------------------------
 
-# Use DATABASE_URL when running in a deployed environment (PostgreSQL)
+# --- Database config: PostgreSQL on Railway, SQLite locally ---
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-# SQLAlchemy expects "postgresql://" instead of "postgres://"
+# Railway/Heroku sometimes use "postgres://", SQLAlchemy wants "postgresql://"
 if DATABASE_URL and DATABASE_URL.startswith("postgres://"):
     DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql://", 1)
-    
 
-app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL
-
-# -------------------------------------------------------------------
-# Local development note:
-# When running locally, comment out the PostgreSQL configuration above
-# and enable the SQLite connection below instead.
-# -------------------------------------------------------------------
-
-# app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///users.db"
-
+app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL or "sqlite:///users.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 
@@ -732,6 +728,8 @@ def process_grading(
     strictness: str = "normal",
     force_ocr: bool = False,
     grading_provider: str = "groq",
+    key_doc_id: str | None = None, 
+    student_doc_id: str | None = None,
 ) -> Tuple[Dict[int, Dict[str, Any]], float, Dict[int, Dict[str, str]]]:
     """
     Main grading pipeline.
@@ -741,7 +739,7 @@ def process_grading(
       avg_score (0-10 scale)
       key_qas_dict: {1: {"question":..., "answer":...}, ...} used for weighting
     """
-    from grading_agent import grade_submission  # Groq-based grader
+
 
     # ---------------------------------------------------------
     # 1) Load and preprocess text
@@ -856,13 +854,31 @@ def process_grading(
                 # -------------------------------------------------
                 # ✅ Non-MCQ: LLM grading as before
                 # -------------------------------------------------
-                student_context = full_student_text[:1200]
-                student_input = (
-                    f"[ANSWER BLOCK]\n{student_for_grading}\n\n"
-                    f"[EXTRA CONTEXT]\n{student_context}"
+                # ---- MCP-style grading: cache + per-question ----
+
+                # ---- MCP-style grading: cache + per-question ----
+                cached = (
+                    get_cached(key_doc_id, student_doc_id, idx, strictness,  grading_provider)
+                    if key_doc_id and student_doc_id
+                    else None
                 )
-                graded = grade_submission(rubric, student_input, strictness, provider_preference=grading_provider)
-                score = float(graded.get("score", 0) or 0)
+
+                if cached:
+                    out = cached
+                    out["cached"] = True
+                else:
+                    out = grade_one(
+                            rubric,
+                            student_for_grading,
+                            strictness=strictness,
+                            provider_preference=grading_provider,
+                        )
+                    if key_doc_id and student_doc_id:
+                        set_cached(key_doc_id, student_doc_id, idx, strictness, grading_provider, out)
+                    out["cached"] = False
+
+                score = float(out.get("score_0_10", 0) or 0)
+                graded = {"score": score, "feedback": out.get("feedback", "")}
 
         total_score += score
         scored += 1
@@ -1273,8 +1289,23 @@ def grade_run():
         key_text = extract_text_from_pdf_auto(key_path)
         ans_text = extract_text_from_pdf_auto(ans_path, force_ocr=force_ocr)
 
+        key_doc_id = uuid.uuid4().hex
+        stu_doc_id = uuid.uuid4().hex
+
+        key_qas = split_into_qas_by_qid(key_text)
+        stu_qas = split_into_qas_by_qid(ans_text)
+
+        put_doc(key_doc_id, role="key", qas=key_qas)
+        put_doc(stu_doc_id, role="student", qas=stu_qas)
+
         results, avg_score, key_qas = process_grading(
-            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr, grading_provider=grading_provider
+            key_text, ans_text,
+            from_text=True,
+            strictness="normal",
+            force_ocr=force_ocr,
+            grading_provider=grading_provider,
+            key_doc_id=key_doc_id,
+            student_doc_id=stu_doc_id,
         )
 
         # Weighting (optional)
@@ -1349,9 +1380,25 @@ def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = 
         # -------------------- GRADE --------------------
         TASKS[task_id]["phase"] = "grade"
         TASKS[task_id]["status"] = "Grading (parsing questions)"
+
+        key_doc_id = uuid.uuid4().hex
+        stu_doc_id = uuid.uuid4().hex
+
+        key_qas_map = split_into_qas_by_qid(key_text)
+        stu_qas_map = split_into_qas_by_qid(ans_text)
+
+        put_doc(key_doc_id, role="key", qas=key_qas_map)
+        put_doc(stu_doc_id, role="student", qas=stu_qas_map)
+
         # process_grading already uses your robust splitters, preprocess, etc.
         results, avg_score, key_qas = process_grading(
-            key_text, ans_text, from_text=True, strictness="normal", force_ocr=force_ocr, grading_provider=grading_provider,
+            key_text, ans_text,
+            from_text=True,
+            strictness="normal",
+            force_ocr=force_ocr,
+            grading_provider=grading_provider,
+            key_doc_id=key_doc_id,
+            student_doc_id=stu_doc_id,
         )
 
         # --- NEW: cap runaway parse explosions ---
