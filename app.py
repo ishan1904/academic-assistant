@@ -1163,6 +1163,62 @@ def generate_prompt(content: str, task: str, **kwargs) -> str:
             + content
         )
 
+    if task == "research":
+        audience = (kwargs.get("audience") or "General academic audience").strip()
+        depth = (kwargs.get("depth") or "Detailed").strip()
+        scope = (kwargs.get("scope") or "General overview").strip()
+        today = datetime.today().strftime("%B %d, %Y")
+
+        return (
+            "You are a senior research analyst. Produce a structured research document, not a casual chat response.\n\n"
+            f"Topic:\n{content}\n\n"
+            f"Audience:\n{audience}\n\n"
+            f"Depth:\n{depth}\n\n"
+            f"Scope:\n{scope}\n\n"
+            "STRICTLY follow this structure and use the headings exactly as written:"
+            f"# {content} — Research Brief\n\n"
+            f"**Prepared:** {today}\n"
+            f"**Scope:** {scope}\n\n"
+            "## Executive Summary\n"
+            "[3-5 sentences with the most important findings]\n\n"
+            "## Background\n"
+            "[Definitions, context, and why this matters]\n\n"
+            "## Key Findings\n\n"
+            "### Finding 1\n"
+            "[Explain clearly with specifics]\n"
+            "- Source: [Link or reference if available]\n\n"
+            "### Finding 2\n"
+            "[Explain clearly with specifics]\n"
+            "- Source: [Link or reference if available]\n\n"
+            "### Finding 3\n"
+            "[Explain clearly with specifics]\n"
+            "- Source: [Link or reference if available]\n\n"
+            "## Data & Statistics\n"
+            "- [Stat 1] — [Source]\n"
+            "- [Stat 2] — [Source]\n"
+            "- [Stat 3] — [Source]\n\n"
+            "## Considerations\n"
+            "[Risks, limitations, conflicting viewpoints, uncertainties]\n\n"
+            "## Recommendations\n"
+            "[Actionable next steps based on the research]\n\n"
+            "## Sources\n"
+            "1. [Full citation or reference]\n"
+            "2. [Full citation or reference]\n"
+            "3. [Full citation or reference]\n\n"
+            "Rules:\n"
+            "Do not repeat the raw input text.\n"
+            "Do not paste the uploaded content verbatim.\n"
+            "Use the content only as source material to create the research brief.\n"
+            "Start directly with the title and structured sections.\n"
+            "- Write in plain, professional language.\n"
+            "- Make the output self-contained.\n"
+            "- Lead with the most important information.\n"
+            "- Include actual numbers or examples when possible.\n"
+            "- If something cannot be verified, say so clearly.\n"
+            "- Keep it structured and document-style.\n"
+            "If exact sources are uncertain, clearly label them as illustrative examples.\n"
+        )
+
     return "Task not supported."
 
 
@@ -1668,92 +1724,112 @@ def upload_file():
     # ----------------------------
     # Single-file tasks
     # ----------------------------
+    topic = request.form.get("topic", "").strip()
+
     file = (
         request.files.get("file")
         or request.files.get("chapter_file")
         or request.files.get("resume_file")
     )
 
-    if not file or not file.filename:
-        msg = "No file selected. Please upload a valid file."
-        if is_ajax:
-            return jsonify({"action": action, "error": msg}), 400
-        flash(msg, "error")
-        return redirect(url_for("dashboard"))
+    content = None
+    filepath = None
 
-    if not allowed_file(file.filename):
-        msg = "Unsupported file type."
-        if is_ajax:
-            return jsonify({"action": action, "error": msg}), 400
-        flash(msg, "error")
-        return redirect(url_for("dashboard"))
+    # Research supports topic-only input
+    if action == "research" and topic:
+        content = topic
 
-    filename = secure_filename(file.filename)
-    filepath = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{filename}")
-    file.save(filepath)
-
-    try:
-        ext = filename.rsplit(".", 1)[1].lower()
-        if ext == "pdf":
-            content = extract_text_from_pdf_auto(filepath)
-        elif ext == "docx":
-            content = extract_text_from_docx(filepath)
-        elif ext == "txt":
-            content = extract_text_from_txt(filepath)
-        elif ext in {"ppt", "pptx"}:
-            content, _ = extract_text_from_ppt_with_slides(filepath)
-        else:
-            content = ""
-
-        if not content or not str(content).strip():
-            msg = "The uploaded file appears to be empty or unsupported."
+    else:
+        if not file or not file.filename:
+            msg = "No file selected. Please upload a valid file."
+            if action == "research":
+                msg = "Please upload a file or enter a research topic."
             if is_ajax:
                 return jsonify({"action": action, "error": msg}), 400
             flash(msg, "error")
             return redirect(url_for("dashboard"))
 
-        # Build prompt per action
-        if action == "questions":
-            prompt = generate_prompt(
-                content,
-                "questions",
-                total_questions=int(request.form.get("total_questions", 20)),
-                mcq_count=int(request.form.get("mcq_count", 5)),
-                tf_count=int(request.form.get("tf_count", 5)),
-                others_count=int(request.form.get("others_count", 10)),
-            )
-        elif action == "concepts":
-            prompt = generate_prompt(content, "concepts")
-        elif action == "structured":
-            prompt = generate_prompt(content, "structured")
-        elif action == "recommendation":
-            prompt = generate_prompt(
-                content,
-                "recommendation",
-                recommender_name=request.form.get("recommender_name", ""),
-                position=request.form.get("position", ""),
-                email=request.form.get("email", ""),
-            )
-        else:
-            msg = f"Invalid action: {action}"
+        if not allowed_file(file.filename):
+            msg = "Unsupported file type."
             if is_ajax:
                 return jsonify({"action": action, "error": msg}), 400
             flash(msg, "error")
             return redirect(url_for("dashboard"))
 
-        result = run_ai(prompt)
-        payload = {"action": action, "result": result}
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{filename}")
+        file.save(filepath)
+
+        try:
+            ext = filename.rsplit(".", 1)[1].lower()
+            if ext == "pdf":
+                content = extract_text_from_pdf_auto(filepath)
+            elif ext == "docx":
+                content = extract_text_from_docx(filepath)
+            elif ext == "txt":
+                content = extract_text_from_txt(filepath)
+            elif ext in {"ppt", "pptx"}:
+                content, _ = extract_text_from_ppt_with_slides(filepath)
+            else:
+                content = ""
+
+            if not content or not str(content).strip():
+                msg = "The uploaded file appears to be empty or unsupported."
+                if is_ajax:
+                    return jsonify({"action": action, "error": msg}), 400
+                flash(msg, "error")
+                return redirect(url_for("dashboard"))
+
+        except Exception as e:
+            msg = f"Error extracting content from the uploaded file: {e}"
+            if is_ajax:
+                return jsonify({"action": action, "error": msg}), 400
+            flash("Error extracting content from the uploaded file.", "error")
+            return redirect(url_for("dashboard"))
+
+    # Build prompt per action
+    if action == "questions":
+        prompt = generate_prompt(
+            content,
+            "questions",
+            total_questions=int(request.form.get("total_questions", 20)),
+            mcq_count=int(request.form.get("mcq_count", 5)),
+            tf_count=int(request.form.get("tf_count", 5)),
+            others_count=int(request.form.get("others_count", 10)),
+        )
+    elif action == "concepts":
+        prompt = generate_prompt(content, "concepts")
+    elif action == "structured":
+        prompt = generate_prompt(content, "structured")
+    elif action == "recommendation":
+        prompt = generate_prompt(
+            content,
+            "recommendation",
+            recommender_name=request.form.get("recommender_name", ""),
+            position=request.form.get("position", ""),
+            email=request.form.get("email", ""),
+        )
+    elif action == "research":
+        prompt = generate_prompt(
+            content,
+            "research",
+            audience=request.form.get("audience", "").strip(),
+            depth=request.form.get("depth", "").strip(),
+            scope=request.form.get("scope", "").strip(),
+        )
+    else:
+        msg = f"Invalid action: {action}"
         if is_ajax:
-            return jsonify(payload)
+            return jsonify({"action": action, "error": msg}), 400
+        flash(msg, "error")
+        return redirect(url_for("dashboard"))
 
-        return render_template("index.html", success=json.dumps(payload, indent=2))
+    result = run_ai(prompt)
+    payload = {"action": action, "result": result}
+    if is_ajax:
+        return jsonify(payload)
 
-    finally:
-        # Keep uploads if you want history; otherwise delete:
-        # try: os.remove(filepath)
-        # except Exception: pass
-        pass
-
+    return render_template("index.html", success=json.dumps(payload, indent=2))
 
 # -----------------------------------------------------------------------------
 # Download routes for generated files (kept compatible with your templates)
