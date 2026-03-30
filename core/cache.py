@@ -28,20 +28,35 @@ def _dialect_name() -> str:
     return _engine().dialect.name
 
 def init_cache():
-    ddl = """
+    ddl_grade = """
     CREATE TABLE IF NOT EXISTS grade_cache(
         cache_key TEXT PRIMARY KEY,
         value_json TEXT NOT NULL,
         created_at DOUBLE PRECISION NOT NULL
     )
     """
+
+    ddl_ai = """
+    CREATE TABLE IF NOT EXISTS ai_response_cache(
+        cache_key TEXT PRIMARY KEY,
+        task TEXT NOT NULL,
+        provider TEXT NOT NULL,
+        value_json TEXT NOT NULL,
+        created_at DOUBLE PRECISION NOT NULL
+    )
+    """
+
     with _engine().begin() as con:
-        con.execute(text(ddl))
+        con.execute(text(ddl_grade))
+        con.execute(text(ddl_ai))
 
 def _key(*parts) -> str:
     raw = "||".join(str(p) for p in parts)
     return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
+# -------------------------
+# Existing grading cache
+# -------------------------
 def get_cached(key_doc_id, student_doc_id, qid, strictness, provider):
     ck = _key(key_doc_id, student_doc_id, qid, strictness, provider)
     with _engine().connect() as con:
@@ -71,3 +86,45 @@ def set_cached(key_doc_id, student_doc_id, qid, strictness, provider, value: dic
 
     with _engine().begin() as con:
         con.execute(stmt, {"ck": ck, "vj": json.dumps(value), "ts": time.time()})
+
+# -------------------------
+# Generic AI response cache
+# -------------------------
+def get_cached_ai_response(task: str, provider: str, prompt: str):
+    ck = _key("ai", task, provider, prompt)
+    with _engine().connect() as con:
+        row = con.execute(
+            text("SELECT value_json FROM ai_response_cache WHERE cache_key=:ck"),
+            {"ck": ck},
+        ).fetchone()
+        return json.loads(row[0]) if row else None
+
+def set_cached_ai_response(task: str, provider: str, prompt: str, value):
+    ck = _key("ai", task, provider, prompt)
+    d = _dialect_name()
+
+    if d == "postgresql":
+        stmt = text("""
+            INSERT INTO ai_response_cache(cache_key, task, provider, value_json, created_at)
+            VALUES(:ck, :task, :provider, :vj, :ts)
+            ON CONFLICT (cache_key) DO UPDATE
+            SET value_json = EXCLUDED.value_json,
+                created_at = EXCLUDED.created_at
+        """)
+    else:
+        stmt = text("""
+            INSERT OR REPLACE INTO ai_response_cache(cache_key, task, provider, value_json, created_at)
+            VALUES(:ck, :task, :provider, :vj, :ts)
+        """)
+
+    with _engine().begin() as con:
+        con.execute(
+            stmt,
+            {
+                "ck": ck,
+                "task": task,
+                "provider": provider,
+                "vj": json.dumps(value),
+                "ts": time.time(),
+            },
+        )

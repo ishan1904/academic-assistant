@@ -49,7 +49,13 @@ from typing import Any, Dict, List, Tuple, Optional
 from translations import get_translation
 from core.parsing import split_into_qas_by_qid
 from core.docstore import init_db, put_doc, get_role, list_qids, get_qa
-from core.cache import init_cache, get_cached, set_cached
+from core.cache import (
+    init_cache,
+    get_cached,
+    set_cached,
+    get_cached_ai_response,
+    set_cached_ai_response,
+)
 from core.grading import grade_one
 
 from dotenv import load_dotenv
@@ -890,11 +896,13 @@ def process_grading(
             "evaluation": graded.get("feedback", ""),
             "score": score,
             "match_mode": match_mode,
+            "cached": out.get("cached", False) if match_mode != "no-match" and not _is_mcq_block(rubric) else False,
         }
 
         print(
             f"[DEBUG] Q{idx} match={match_mode} "
-            f"score={score} preview={student_for_display[:120]!r}"
+            f"score={score} cached={results[idx]['cached']} "
+            f"preview={student_for_display[:120]!r}"
         )
 
     avg = round(total_score / scored, 2) if scored else 0.0
@@ -1057,7 +1065,38 @@ def query_claude_api(prompt: str):
     except Exception as e:
         print(f"[ERROR] Claude call failed: {e}\n{traceback.format_exc()}")
         return {"error": f"Claude call failed: {str(e)}"}
+    
 
+
+def run_ai_with_cache(task: str, provider: str, prompt: str):
+    """
+    Shared cached AI runner for non-grading features.
+    Cache key is based on task + provider + full prompt.
+    """
+    provider = (provider or "openai").strip().lower()
+    task = (task or "general").strip().lower()
+
+    cached = get_cached_ai_response(task, provider, prompt)
+    if cached is not None:
+        print(f"[CACHE HIT] task={task} provider={provider}")
+        return {
+            "data": cached,
+            "cached": True
+        }
+
+    print(f"[CACHE MISS] task={task} provider={provider}")
+
+    if provider == "claude":
+        result = query_claude_api(prompt)
+    else:
+        result = query_openai_api(prompt)
+
+    set_cached_ai_response(task, provider, prompt, result)
+
+    return {
+        "data": result,
+        "cached": False
+    }
 
 def generate_prompt(content: str, task: str, **kwargs) -> str:
     """Build prompts for upload features."""
@@ -1065,8 +1104,15 @@ def generate_prompt(content: str, task: str, **kwargs) -> str:
 
     if task == "concepts":
         return (
-            "Identify core concepts from the content. Output 10–15 concise bullet points, each "
-            "'Concept: short explanation'.\n\nContent:\n"
+            "Identify the core concepts from the content.\n"
+            "Return JSON ONLY in this format:\n"
+            "{ 'concepts': [ { 'title': '...', 'description': '...' } ] }\n\n"
+            "Rules:\n"
+            "- Extract the main concepts only\n"
+            "- Keep descriptions concise and clear\n"
+            "- Do not return markdown\n"
+            "- Do not return bullets\n\n"
+            "Content:\n"
             + content
         )
 
@@ -1645,8 +1691,7 @@ def upload_file():
     is_ajax = request.headers.get("X-Requested-With") == "XMLHttpRequest" or request.accept_mimetypes["application/json"] >= request.accept_mimetypes["text/html"]
 
     def run_ai(prompt: str):
-        return query_claude_api(prompt) if ai_model == "claude" else query_openai_api(prompt)
-
+        return run_ai_with_cache(action, ai_model, prompt)
     # ----------------------------
     # Exam papers: multi PPT/PPTX
     # ----------------------------
@@ -1713,8 +1758,12 @@ def upload_file():
             questions_per_student=questions_per_student,
         )
 
-        result = run_ai(prompt)
-        payload = {"action": action, "result": result}
+        ai_response = run_ai(prompt)
+
+        payload = {
+            "action": action,
+            "result": ai_response.get("data"),
+        }
         if is_ajax:
             return jsonify(payload)
 
@@ -1824,8 +1873,11 @@ def upload_file():
         flash(msg, "error")
         return redirect(url_for("dashboard"))
 
-    result = run_ai(prompt)
-    payload = {"action": action, "result": result}
+    ai_response = run_ai(prompt)
+    payload = {
+        "action": action,
+        "result": ai_response.get("data")
+    }
     if is_ajax:
         return jsonify(payload)
 

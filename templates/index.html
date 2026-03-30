@@ -1038,49 +1038,46 @@
             // - converts "- item" lines to <ul><li>...</li></ul>
             // - keeps paragraphs readable
             function formatMarkdownLite(text) {
-            const lines = String(text).split(/\r?\n/);
+            if (!text) return "";
 
-            const htmlLines = [];
-            let inList = false;
+            // Normalize line breaks
+            text = text.replace(/\r/g, "");
 
-            for (let raw of lines) {
-                const line = raw.trim();
+            // Split into lines
+            const lines = text.split("\n");
 
-                // blank line = paragraph break
-                if (!line) {
-                if (inList) {
-                    htmlLines.push("</ul>");
-                    inList = false;
+            let html = "";
+
+            lines.forEach(line => {
+                line = line.trim();
+
+                if (!line) return;
+
+                // Bullet point with bold title
+                const match = line.match(/^-?\s*\*\*(.*?)\*\*:\s*(.*)/);
+
+                if (match) {
+                    const title = match[1];
+                    const desc = match[2];
+
+                    html += `
+                        <div style="margin-bottom:10px;">
+                            <div style="font-weight:600;">${escapeHtml(title)}</div>
+                            <div style="margin-left:10px;">• ${escapeHtml(desc)}</div>
+                        </div>
+                    `;
+                } else {
+                    // Normal bullet
+                    if (line.startsWith("- ")) {
+                        html += `<div>• ${escapeHtml(line.slice(2))}</div>`;
+                    } else {
+                        html += `<p>${escapeHtml(line)}</p>`;
+                    }
                 }
-                htmlLines.push("<div class='p-gap'></div>");
-                continue;
-                }
+            });
 
-                // bullet line
-                if (/^-\s+/.test(line)) {
-                if (!inList) {
-                    htmlLines.push("<ul class='pretty-list'>");
-                    inList = true;
-                }
-                const item = line.replace(/^-\s+/, "");
-                htmlLines.push(`<li>${escapeHtml(item).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")}</li>`);
-                continue;
-                }
-
-                // normal text line
-                if (inList) {
-                htmlLines.push("</ul>");
-                inList = false;
-                }
-
-                const safe = escapeHtml(line).replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-                htmlLines.push(`<p class="pretty-p">${safe}</p>`);
-            }
-
-            if (inList) htmlLines.push("</ul>");
-            return htmlLines.join("\n");
-            }
-
+            return html;
+        }
             // Recommendation letter formatter:
             // Splits into paragraphs and adds spacing like a real letter
             function formatLetter(text) {
@@ -1109,140 +1106,162 @@
         // -----------------------------
         // AJAX helpers for /upload tools
         // -----------------------------
-        function renderAiOutput(action, payload) {
-            const active = document.querySelector(".content-section.active");
-            if (!active) return;
+    console.log("UPLOAD RESPONSE:", data);
+    console.log("UPLOAD RESPONSE RESULT:", data.result);
 
-            const out = active.querySelector(".section-output");
-            const pre = active.querySelector(".section-output-pre");
-            if (!out || !pre) return;
+    function renderAiOutput(action, response) {
+    console.log("renderAiOutput received:", response);
+    const active = document.querySelector(".content-section.active");
+    if (!active) return;
 
-            out.style.display = "block";
-            pre.innerHTML = ""; // we will inject HTML now
+    const out = active.querySelector(".section-output");
+    const pre = active.querySelector(".section-output-pre");
+    if (!out || !pre) return;
 
-            // If error → show clean error box
-            if (typeof payload === "string") {
-            // Recommendation should look like a letter
-            if (action === "recommendation") {
-                pre.innerHTML = formatLetter(payload);
-                return;
+    out.style.display = "block";
+    pre.innerHTML = "";
+
+    let payload = response;
+
+    // Try to parse JSON strings into real objects
+    if (typeof payload === "string") {
+        const trimmed = payload.trim();
+        if (
+            (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
+            (trimmed.startsWith("[") && trimmed.endsWith("]"))
+        ) {
+            try {
+                payload = JSON.parse(trimmed);
+            } catch (e) {
+                console.warn("Payload looked like JSON but could not be parsed:", e);
             }
+        }
+    }
 
-            // Concepts often come back as markdown bullets
-            if (action === "concepts" || action === "chapter" || action === "core_concepts") {
-                pre.innerHTML = formatMarkdownLite(payload);
-                return;
-            }
+    if (payload && typeof payload === "object" && payload.error) {
+        pre.innerHTML += `<div class="ui-error">${escapeHtml(payload.error)}</div>`;
+        return;
+    }
 
-            // default: readable paragraphs + wrapping
-            pre.innerHTML = `<div class="pretty-text">${formatMarkdownLite(payload)}</div>`;
+    if (typeof payload === "string") {
+        if (action === "recommendation") {
+            pre.innerHTML += formatLetter(payload);
             return;
-            }
+        }
 
+        if (action === "concepts" || action === "chapter" || action === "core_concepts" || action === "research") {
+            pre.innerHTML += formatMarkdownLite(payload);
+            return;
+        }
 
-            // If plain string → render as paragraph
-            if (typeof payload === "string") {
-                pre.innerHTML = `<p>${payload}</p>`;
-                return;
-            }
+        pre.innerHTML += `<div class="pretty-text">${formatMarkdownLite(payload)}</div>`;
+        return;
+    }
 
-            // Structured JSON rendering
-            for (const [key, value] of Object.entries(payload)) {
-                const title = key
-                    .replaceAll("_", " ")
-                    .replace(/\b\w/g, c => c.toUpperCase());
+    if (!payload || typeof payload !== "object") {
+        pre.innerHTML += `<p>${escapeHtml(String(payload ?? ""))}</p>`;
+        return;
+    }
 
-                const section = document.createElement("div");
-                section.className = "ui-block";
-                section.innerHTML = `<h4>${title}</h4>`;
+    for (const [key, value] of Object.entries(payload)) {
+        const title = key
+            .replaceAll("_", " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
 
-                if (Array.isArray(value)) {
+        const section = document.createElement("div");
+        section.className = "ui-block";
+        section.innerHTML = `<h4>${title}</h4>`;
 
-                    // ✅ EXAMS: value = [{ student: 1, questions: [...] }, ...]
-                    if (key === "exams") {
-                        value.forEach(exam => {
-                            if (!exam || typeof exam !== "object" || !Array.isArray(exam.questions)) return;
+        if (Array.isArray(value)) {
+            if (key === "exams") {
+                value.forEach(exam => {
+                    if (!exam || typeof exam !== "object" || !Array.isArray(exam.questions)) return;
 
-                            // Student container
-                            const studentBlock = document.createElement("div");
-                            studentBlock.className = "exam-student-block";
+                    const studentBlock = document.createElement("div");
+                    studentBlock.className = "exam-student-block";
 
-                            const hdr = document.createElement("h5");
-                            hdr.className = "exam-student-title";
-                            hdr.textContent = `Student ${exam.student ?? ""}`.trim();
-                            studentBlock.appendChild(hdr);
+                    const hdr = document.createElement("h5");
+                    hdr.className = "exam-student-title";
+                    hdr.textContent = `Student ${exam.student ?? ""}`.trim();
+                    studentBlock.appendChild(hdr);
 
-                            // Each student has their own UL
-                            const studentUl = document.createElement("ul");
-                            studentUl.className = "exam-question-list";
+                    const studentUl = document.createElement("ul");
+                    studentUl.className = "exam-question-list";
 
-                            exam.questions.forEach((q, idx) => {
-                                const li = document.createElement("li");
-                                li.className = "exam-question-item";
+                    exam.questions.forEach((q, idx) => {
+                        const li = document.createElement("li");
+                        li.className = "exam-question-item";
 
-                                li.innerHTML = `
-                                    <div class="q-title"><strong>Q${idx + 1}.</strong> ${q.question ?? "Question"}</div>
-                                    ${q.options ? `<div class="q-options"><strong>Options:</strong> ${q.options.join(", ")}</div>` : ""}
-                                   ${(() => {
-                                        const ans = (q.answer ?? "").toString();
-                                        const preview = ans.length > 160 ? ans.slice(0, 160) + "…" : ans;
+                        li.innerHTML = `
+                            <div class="q-title"><strong>Q${idx + 1}.</strong> ${escapeHtml(q.question ?? "Question")}</div>
+                            ${q.options ? `<div class="q-options"><strong>Options:</strong> ${q.options.map(o => escapeHtml(o)).join(", ")}</div>` : ""}
+                            ${(() => {
+                                const ans = (q.answer ?? "").toString();
+                                const preview = ans.length > 160 ? ans.slice(0, 160) + "…" : ans;
 
-                                        return `
-                                            <div class="q-answer-preview"><strong>Answer:</strong> ${preview || "(no answer returned)"}</div>
-
-                                            <details class="q-answer">
-                                                <summary>Show full answer</summary>
-                                                <div class="q-answer-body">${ans || "(no answer returned)"}</div>
-                                            </details>
-                                        `;
-                                    })()}
-
-                                    <div class="q-meta">
-                                        <span><strong>Difficulty:</strong> ${q.difficulty ?? ""}</span>
-                                        <span><strong>Reference:</strong> ${q.reference ?? ""}</span>
-                                    </div>
+                                return `
+                                    <div class="q-answer-preview"><strong>Answer:</strong> ${escapeHtml(preview || "(no answer returned)")}</div>
+                                    <details class="q-answer">
+                                        <summary>Show full answer</summary>
+                                        <div class="q-answer-body">${escapeHtml(ans || "(no answer returned)")}</div>
+                                    </details>
                                 `;
+                            })()}
+                            <div class="q-meta">
+                                <span><strong>Difficulty:</strong> ${escapeHtml(q.difficulty ?? "")}</span>
+                                <span><strong>Reference:</strong> ${escapeHtml(q.reference ?? "")}</span>
+                            </div>
+                        `;
 
-                                studentUl.appendChild(li);
-                            });
+                        studentUl.appendChild(li);
+                    });
 
-                            studentBlock.appendChild(studentUl);
-                            section.appendChild(studentBlock);
-                        });
+                    studentBlock.appendChild(studentUl);
+                    section.appendChild(studentBlock);
+                });
+            } else {
+                const ul = document.createElement("ul");
 
-                    } else {
-                        // ✅ NORMAL ARRAYS: chapter questions, concepts lists, etc.
-                        const ul = document.createElement("ul");
+                value.forEach(item => {
+                    const li = document.createElement("li");
 
-                        value.forEach(item => {
-                            const li = document.createElement("li");
-
-                            if (item && typeof item === "object") {
-                                li.innerHTML = `
-                                    <strong>${item.question ?? "Item"}</strong><br>
-                                    ${item.options ? "<em>Options:</em> " + item.options.join(", ") + "<br>" : ""}
-                                    ${item.answer ? "<em>Answer:</em> " + item.answer + "<br>" : ""}
-                                    ${item.difficulty ? "<em>Difficulty:</em> " + item.difficulty + "<br>" : ""}
-                                    ${item.reference ? "<em>Reference:</em> " + item.reference : ""}
-                                `;
-                            } else {
-                                li.textContent = String(item);
-                            }
-
-                            ul.appendChild(li);
-                        });
-
-                        section.appendChild(ul);
+                    // 🔥 Concepts case (title + description)
+                    if (item && typeof item === "object" && item.title && item.description) {
+                        li.innerHTML = `
+                            <strong>${escapeHtml(item.title)}</strong><br>
+                            ${escapeHtml(item.description)}
+                        `;
                     }
 
-                } else {
-                    section.innerHTML += `<p>${value}</p>`;
-                }
+                    // Existing question-style objects
+                    else if (item && typeof item === "object") {
+                        li.innerHTML = `
+                            <strong>${escapeHtml(item.question ?? "Item")}</strong><br>
+                            ${item.options ? "<em>Options:</em> " + item.options.map(o => escapeHtml(o)).join(", ") + "<br>" : ""}
+                            ${item.answer ? "<em>Answer:</em> " + escapeHtml(item.answer) + "<br>" : ""}
+                            ${item.difficulty ? "<em>Difficulty:</em> " + escapeHtml(item.difficulty) + "<br>" : ""}
+                            ${item.reference ? "<em>Reference:</em> " + escapeHtml(item.reference) : ""}
+                        `;
+                    }
 
-                pre.appendChild(section);
+                    else {
+                        li.textContent = String(item); 
+                    }
+
+                    ul.appendChild(li);
+                });
+                section.appendChild(ul);
             }
-
+        } else if (value && typeof value === "object") {
+            section.innerHTML += `<pre style="white-space: pre-wrap;">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
+        } else {
+            section.innerHTML += `<p>${escapeHtml(String(value ?? ""))}</p>`;
         }
+
+        pre.appendChild(section);
+    }
+}
+      
 
         function setHidden(form, name, value) {
             let el = form.querySelector(`input[name="${name}"]`);
@@ -1416,7 +1435,6 @@
         async function submitChapterConcepts() {
         const form = document.getElementById("chapterForm");
 
-        // ✅ ensure action is sent
         let actionInput = form.querySelector('input[name="action"]');
         if (!actionInput) {
             actionInput = document.createElement("input");
@@ -1424,7 +1442,7 @@
             actionInput.name = "action";
             form.appendChild(actionInput);
         }
-        actionInput.value = "concepts"; // MUST match Flask
+        actionInput.value = "concepts";
 
         showProcessing();
         try {
@@ -1436,7 +1454,7 @@
         } finally {
             hideProcessing();
         }
-        }
+    }
 
 
         function formatMB(bytes) {
@@ -1523,7 +1541,7 @@
                     throw new Error(data.error || `Request failed (status ${res.status})`);
                 }
 
-                renderAiOutput(data.action || "research", data.result ?? data);
+                renderAiOutput(data.action || "research",data.result ?? data);
             } catch (e) {
                 console.error(e);
                 renderAiOutput("research", { error: e.message });
