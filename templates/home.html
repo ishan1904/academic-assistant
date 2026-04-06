@@ -474,8 +474,17 @@
 </section>
 
 <footer>
-    {{ t("app_title") }} &nbsp;·&nbsp; {{ t("privacy_policy") }}
-    &nbsp;·&nbsp; <a href="{{ url_for('login') }}" style="color:var(--accent); text-decoration:none;">{{ t("login") }}</a>
+    <a href="{{ url_for('home') }}" style="color:var(--text-muted); text-decoration:none;">
+        {{ t("app_title") }}
+    </a>
+    &nbsp;·&nbsp;
+    <a href="{{ url_for('login') }}" style="color:var(--text-muted); text-decoration:none;">
+        {{ t("privacy_policy") }}
+    </a>
+    &nbsp;·&nbsp;
+    <a href="{{ url_for('login') }}" style="color:var(--accent); text-decoration:none;">
+        {{ t("login") }}
+    </a>
 </footer>
 
 </body>
