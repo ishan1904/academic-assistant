@@ -473,12 +473,24 @@
     </div>
 </section>
 
+<section id="privacy-section" class="cta-section" style="margin-top: 40px;">
+    <div class="cta-box">
+        <h2>Privacy Policy</h2>
+        <p>
+            Uploaded files are processed for academic assistance features such as grading,
+            syllabus enhancement, research summaries, and question generation. User accounts
+            are protected with hashed passwords, and the application uses third-party AI
+            providers only for processing requested tasks.
+        </p>
+    </div>
+</section>
+
 <footer>
     <a href="{{ url_for('home') }}" style="color:var(--text-muted); text-decoration:none;">
         {{ t("app_title") }}
     </a>
     &nbsp;·&nbsp;
-    <a href="{{ url_for('login') }}" style="color:var(--text-muted); text-decoration:none;">
+    <a href="#privacy-section" style="color:var(--text-muted); text-decoration:none;">
         {{ t("privacy_policy") }}
     </a>
     &nbsp;·&nbsp;
