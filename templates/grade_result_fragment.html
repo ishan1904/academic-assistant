@@ -1,63 +1,300 @@
 {% if avg_score is not none %}
-<p><strong>{{ t('score') }}:</strong> {{ avg_score }}</p>
+<div class="grading-summary-card">
+  <div class="grading-summary-left">
+    <div class="grading-summary-label">{{ t('score') | default('Score Summary') }}</div>
+    <div class="grading-summary-main">
+      <span class="grading-summary-score">{{ avg_score }}</span>
+      <span class="grading-summary-scale">/ 10</span>
+    </div>
+    {% if average_display %}
+    <div class="grading-summary-sub">{{ average_display }}</div>
+    {% endif %}
+  </div>
+
+  <div class="grading-summary-right">
+    <div class="grading-summary-count">
+      {{ results|length }} {{ t('question') | default('Questions') }}
+    </div>
+  </div>
+</div>
 {% endif %}
 
 <style>
-  table {
-    width: 100%;
-    border-collapse: collapse;
-    font-family: "Segoe UI", sans-serif;
-    font-size: 0.9rem;
+  .grading-results-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-top: 14px;
   }
 
-  th,
-  td {
-    border: 1px solid #ccc;
-    padding: 6px;
-    vertical-align: top;
+  .grading-summary-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 18px;
+    padding: 18px 20px;
+    border-radius: 16px;
+    background: rgba(255,255,255,0.03);
+    border: 1px solid rgba(255,255,255,0.08);
+    margin-bottom: 18px;
   }
 
-  th {
-    background-color: #f4f4f4;
-    text-align: left;
+  .grading-summary-label {
+    font-size: 0.76rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: #8fa3bf;
+    margin-bottom: 6px;
   }
 
-  .eval-cell {
-    background: #fdfdfd;
-    white-space: pre-wrap;
-    /* Preserves newlines and wraps text */
+  .grading-summary-main {
+    display: flex;
+    align-items: baseline;
+    gap: 6px;
+  }
+
+  .grading-summary-score {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #f0f4ff;
+    line-height: 1;
+  }
+
+  .grading-summary-scale {
+    font-size: 1rem;
+    color: #8fa3bf;
+  }
+
+  .grading-summary-sub {
+    margin-top: 8px;
+    font-size: 0.88rem;
+    color: #8fa3bf;
+    line-height: 1.55;
+  }
+
+  .grading-summary-count {
+    display: inline-flex;
+    align-items: center;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: rgba(84,180,255,0.12);
+    border: 1px solid rgba(84,180,255,0.24);
+    color: #7fc6ff;
+    font-size: 0.82rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .grading-card {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 16px;
+    overflow: hidden;
+  }
+
+  .grading-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 16px 18px 14px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    background: rgba(255,255,255,0.02);
+  }
+
+  .grading-card-title-wrap {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .grading-card-qnum {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8fa3bf;
+    margin-bottom: 6px;
+  }
+
+  .grading-card-title {
+    font-size: 1.05rem;
+    font-weight: 650;
+    color: #f0f4ff;
+    line-height: 1.45;
+  }
+
+  .grading-score-badge {
+    min-width: 84px;
+    text-align: center;
+    padding: 12px 10px;
+    border-radius: 14px;
+    background: linear-gradient(180deg, rgba(84,180,255,0.18), rgba(84,180,255,0.08));
+    border: 1px solid rgba(84,180,255,0.34);
+    color: #8fd3ff;
+    font-weight: 800;
+    font-size: 1.8rem;
+    line-height: 1;
+    flex-shrink: 0;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03);
+  }
+
+  .grading-score-badge small {
+    display: block;
+    margin-top: 7px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: #d7ecff;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .grading-card-body {
+    padding: 16px 18px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .grading-compare-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  .grading-block {
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
+    border-radius: 12px;
+    padding: 13px 14px;
+    min-height: 100%;
+  }
+
+  .grading-block-label {
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: #8fa3bf;
+    margin-bottom: 8px;
+  }
+
+  .grading-block-content {
+    font-size: 0.93rem;
+    line-height: 1.68;
+    color: #ecf4ff;
+    white-space: pre-line;
+    word-break: break-word;
+    text-align: left;  
+}
+
+  .grading-evaluation {
+    background: rgba(84,180,255,0.05);
+    border-color: rgba(84,180,255,0.14);
+  }
+
+  .grading-empty {
+    color: #6f86a3;
+    font-style: italic;
+  }
+
+  @media (max-width: 900px) {
+    .grading-compare-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  @media (max-width: 720px) {
+    .grading-summary-card,
+    .grading-card-header {
+      flex-direction: column;
+      align-items: stretch;
+    }
+
+    .grading-score-badge {
+      width: fit-content;
+    }
+
+    .grading-block-content::marker {
+        color: #9db4ff;
+    }
+
+    .grading-block-content ul,
+    .grading-block-content ol {
+        padding-left: 18px;
+        margin: 6px 0;
+    }
+
+    .grading-block-content li {
+        margin: 4px 0;
+        color: #e6f0ff;
+    }
+
+    .grading-block-content li::marker {
+        color: #7fc6ff;
+    }
+
+   
+    .grading-block-content span[style],
+    .grading-block-content div[style] {
+        background: transparent !important;
+    }
   }
 </style>
 
-<table>
-  <thead>
-    <tr>
-      <th>#</th>
-      <th>{{ t('question') }}</th>
-      <th>{{ t('correct_answer') }}</th>
-      <th>{{ t('student_answer') }}</th>
-      <th>{{ t('evaluation') }}</th>
-      <th>{{ t('score') }}</th>
-    </tr>
-  </thead>
+<div class="grading-results-wrap">
+  {% for qnum, item in results.items() %}
+  <div class="grading-card">
+    <div class="grading-card-header">
+      <div class="grading-card-title-wrap">
+        <div class="grading-card-qnum">{{ t('question') | default('Question') }} {{ qnum }}</div>
+        <div class="grading-card-title">
+          {{ item.question if item.question else (t('question') | default('Question')) ~ ' ' ~ qnum }}
+        </div>
+      </div>
 
-  <tbody>
-    {% for qnum, item in results.items() %}
-    <tr>
-      <td>{{ qnum }}</td>
+      <div class="grading-score-badge">
+        {{ item.score if item.score is not none else 0 }}
+        <small>{{ t('score') | default('Score') }}</small>
+      </div>
+    </div>
 
-      <td class="eval-cell">{{ item.question | e }}</td>
+    <div class="grading-card-body">
+      <div class="grading-compare-grid">
+        <div class="grading-block">
+          <div class="grading-block-label">{{ t('correct_answer') }}</div>
+          <div class="grading-block-content">
+            {% if item.correct_answer %}
+              {{ item.correct_answer | replace('\t', ' ') | trim | e }}
+            {% else %}
+              <span class="grading-empty">—</span>
+            {% endif %}
+          </div>
+        </div>
 
-      <td class="eval-cell">{{ item.correct_answer | e }}</td>
+        <div class="grading-block">
+          <div class="grading-block-label">{{ t('student_answer') }}</div>
+          <div class="grading-block-content">
+            {% if item.student_answer %}
+              {{ item.student_answer | replace('\t', ' ') | trim | e }}
+            {% else %}
+              <span class="grading-empty">—</span>
+            {% endif %}
+          </div>
+        </div>
+      </div>
 
-      <td class="eval-cell">{{ item.student_answer | e }}</td>
-
-      <td class="eval-cell">{{ item.evaluation | e }}</td>
-
-      <td style="text-align:center; font-weight:bold;">
-        {{ item.score }}
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+      <div class="grading-block grading-evaluation">
+        <div class="grading-block-label">{{ t('evaluation') }}</div>
+        <div class="grading-block-content">
+          {% if item.evaluation %}
+            {{ item.evaluation | replace('\t', ' ') | trim | e }}
+          {% else %}
+            <span class="grading-empty">—</span>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>

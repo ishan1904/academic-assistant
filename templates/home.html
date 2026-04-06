@@ -1,161 +1,482 @@
-
 <!DOCTYPE html>
 <html lang="{{ get_lang() }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t("home_title") }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <style>
+        :root {
+            --bg:           #0c0f14;
+            --bg-surface:   #131820;
+            --bg-card:      #1a2130;
+            --bg-card2:     #1f2a3d;
+            --border:       rgba(255,255,255,0.07);
+            --border-glow:  rgba(84,180,255,0.25);
+            --accent:       #54b4ff;
+            --accent2:      #7dd3fc;
+            --accent-dim:   rgba(84,180,255,0.12);
+            --green:        #4ade80;
+            --amber:        #fbbf24;
+            --text-primary: #f0f4ff;
+            --text-secondary:#8fa3bf;
+            --text-muted:   #5a7290;
+            --radius:       12px;
+            --radius-lg:    18px;
+            --font-body:    'DM Sans', sans-serif;
+            --font-display: 'DM Serif Display', serif;
+            --font-mono:    'JetBrains Mono', monospace;
+            --transition:   0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #eef2f3, #8e9eab);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text-primary);
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            padding: 20px;
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
         }
 
-        .header {
-            text-align: center;
-            padding: 10px 0;
-            background: #4CAF50;
-            color: white;
-            border-radius: 8px 8px 0 0;
-            margin: -20px -20px 20px -20px;
+        /* ── Topbar ─────────────────────────────────────────────── */
+        .topbar {
+            position: sticky; top: 0; z-index: 100;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 40px; height: 62px;
+            background: rgba(12,15,20,0.85);
+            backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
         }
 
-        .card {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .options-menu {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin-top: 20px;
-        }
-
-        .option-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            flex: 1;
-            max-width: 250px;
-            text-align: center;
+        .topbar-logo {
+            display: flex; align-items: center; gap: 10px;
             text-decoration: none;
         }
-
-        .option-btn:hover {
-            background: #45a049;
-        }
-
-        h2 {
-            margin-bottom: 10px;
-            text-align: center;
-            color: #333;
-        }
-
-        p {
-            margin-bottom: 15px;
-            line-height: 1.6;
-        }
-
-        .feature-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 20px;
-            justify-content: center;
-        }
-
-        .feature {
-            flex: 1;
-            min-width: 250px;
-            max-width: 300px;
-            background: #f9f9f9;
+        .logo-mark {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
             border-radius: 8px;
-            padding: 15px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            display: flex; align-items: center; justify-content: center;
+            font-size: 14px; font-weight: 700; color: #fff;
+            font-family: var(--font-mono);
+        }
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 1.1rem; color: var(--text-primary);
         }
 
-        .feature h3 {
-            margin-top: 0;
-            color: #4CAF50;
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+
+        .lang-toggle {
+            display: flex; align-items: center;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 8px; overflow: hidden;
+            font-size: 0.78rem; font-weight: 500;
+        }
+        .lang-toggle a {
+            padding: 5px 12px; text-decoration: none;
+            color: var(--text-secondary); transition: var(--transition);
+            font-family: var(--font-mono); letter-spacing: 0.05em;
+        }
+        .lang-toggle a.active, .lang-toggle a:hover {
+            background: var(--accent-dim); color: var(--accent);
+        }
+        .lang-toggle .div { width: 1px; height: 20px; background: var(--border); }
+
+        .btn {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 8px 18px; border-radius: var(--radius);
+            font-size: 0.88rem; font-weight: 500;
+            font-family: var(--font-body); cursor: pointer;
+            text-decoration: none; transition: var(--transition); border: none;
+        }
+        .btn-ghost {
+            background: transparent; border: 1px solid var(--border);
+            color: var(--text-secondary);
+        }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .btn-primary {
+            background: var(--accent); color: #0c0f14; font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: var(--accent2);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(84,180,255,0.25);
+        }
+
+        /* ── Hero ───────────────────────────────────────────────── */
+        .hero {
+            position: relative; z-index: 1;
+            max-width: 1100px; margin: 0 auto;
+            padding: 100px 40px 80px;
+            text-align: center;
+        }
+
+        /* Glow blobs */
+        .hero::before {
+            content: '';
+            position: absolute; top: 0; left: 50%;
+            transform: translateX(-50%);
+            width: 800px; height: 400px;
+            background: radial-gradient(ellipse, rgba(84,180,255,0.07) 0%, transparent 70%);
+            pointer-events: none; z-index: -1;
+        }
+
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 7px;
+            padding: 4px 16px;
+            background: var(--accent-dim); border: 1px solid var(--border-glow);
+            border-radius: 50px; font-size: 0.75rem; font-weight: 500;
+            color: var(--accent); font-family: var(--font-mono);
+            letter-spacing: 0.06em; margin-bottom: 28px;
+        }
+        .hero-badge .dot {
+            width: 6px; height: 6px; background: var(--green);
+            border-radius: 50%; animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%,100% { opacity:1; transform:scale(1); }
+            50% { opacity:0.5; transform:scale(0.8); }
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(2.6rem, 6vw, 4rem);
+            line-height: 1.1; color: var(--text-primary);
+            margin-bottom: 22px;
+        }
+        .hero-title em {
+            font-style: italic;
+            background: linear-gradient(90deg, var(--accent), #a78bfa);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 1.05rem; color: var(--text-secondary);
+            max-width: 600px; margin: 0 auto 40px;
+            line-height: 1.75;
+        }
+
+        .hero-cta { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+
+        /* ── Stats strip ────────────────────────────────────────── */
+        .stats-strip {
+            display: flex; justify-content: center; gap: 0;
+            max-width: 700px; margin: 64px auto 0;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); overflow: hidden;
+        }
+        .stat-item {
+            flex: 1; padding: 20px 24px; text-align: center;
+            border-right: 1px solid var(--border);
+        }
+        .stat-item:last-child { border-right: none; }
+        .stat-num {
+            font-family: var(--font-display); font-size: 1.8rem;
+            color: var(--accent); display: block; margin-bottom: 4px;
+        }
+        .stat-label { font-size: 0.78rem; color: var(--text-muted); font-family: var(--font-mono); letter-spacing: 0.05em; }
+
+        /* ── Features grid ──────────────────────────────────────── */
+        .features-section {
+            position: relative; z-index: 1;
+            max-width: 1100px; margin: 0 auto;
+            padding: 80px 40px;
+        }
+        .section-header { text-align: center; margin-bottom: 48px; }
+        .section-label {
+            font-size: 0.72rem; font-weight: 600; letter-spacing: 0.12em;
+            color: var(--text-muted); font-family: var(--font-mono);
+            text-transform: uppercase; margin-bottom: 12px; display: block;
+        }
+        .section-title {
+            font-family: var(--font-display);
+            font-size: clamp(1.8rem, 4vw, 2.6rem);
+            color: var(--text-primary); margin-bottom: 12px;
+        }
+        .section-sub { font-size: 0.95rem; color: var(--text-muted); max-width: 520px; margin: 0 auto; line-height: 1.7; }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 16px;
+        }
+
+        .feature-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 24px;
+            transition: var(--transition);
+            position: relative; overflow: hidden;
+        }
+        .feature-card::before {
+            content: ''; position: absolute;
+            top: 0; left: 0; right: 0; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--accent), transparent);
+            opacity: 0; transition: var(--transition);
+        }
+        .feature-card:hover {
+            border-color: rgba(255,255,255,0.1);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 32px rgba(0,0,0,0.3);
+        }
+        .feature-card:hover::before { opacity: 1; }
+
+        .feature-icon {
+            width: 44px; height: 44px;
+            background: var(--accent-dim); border: 1px solid var(--border-glow);
+            border-radius: 10px; display: flex; align-items: center; justify-content: center;
+            font-size: 1rem; color: var(--accent); margin-bottom: 16px;
+        }
+        .feature-card h3 {
+            font-size: 1rem; font-weight: 600; color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+        .feature-card p {
+            font-size: 0.85rem; color: var(--text-muted); line-height: 1.6;
+        }
+
+        /* ── CTA section ────────────────────────────────────────── */
+        .cta-section {
+            position: relative; z-index: 1;
+            max-width: 700px; margin: 0 auto 100px;
+            padding: 0 40px;
+            text-align: center;
+        }
+        .cta-box {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 52px 48px;
+            position: relative; overflow: hidden;
+        }
+        .cta-box::after {
+            content: '';
+            position: absolute; bottom: -60px; right: -60px;
+            width: 200px; height: 200px;
+            background: radial-gradient(circle, rgba(84,180,255,0.08), transparent 70%);
+            pointer-events: none;
+        }
+        .cta-box h2 {
+            font-family: var(--font-display);
+            font-size: 2rem; color: var(--text-primary); margin-bottom: 12px;
+        }
+        .cta-box p { font-size: 0.95rem; color: var(--text-muted); margin-bottom: 28px; line-height: 1.7; }
+
+        /* ── Footer ─────────────────────────────────────────────── */
+        footer {
+            border-top: 1px solid var(--border);
+            padding: 24px 40px;
+            text-align: center;
+            font-size: 0.78rem; color: var(--text-muted);
+            font-family: var(--font-mono);
+            position: relative; z-index: 1;
+        }
+
+        @media (max-width: 640px) {
+            .topbar { padding: 0 20px; }
+            .hero { padding: 64px 20px 48px; }
+            .features-section { padding: 48px 20px; }
+            .cta-section { padding: 0 20px; }
+            .cta-box { padding: 36px 24px; }
+            .stats-strip { flex-direction: column; }
+            .stat-item { border-right: none; border-bottom: 1px solid var(--border); }
+            .stat-item:last-child { border-bottom: none; }
+        }
+
+        .trust-strip {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0;
+            max-width: 900px;
+            margin: 56px auto 0;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+        }
+
+        .trust-item {
+            padding: 22px 20px;
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            text-align: left;
+        }
+
+        .trust-item:last-child {
+            border-right: none;
+        }
+
+        .trust-title {
+            font-size: 1.10rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.02em;
+        }
+
+        .trust-text {
+            font-size: 0.8rem;
+            line-height: 1.55;
+            color: var(--text-muted);
+        }
+
+        @media (max-width: 900px) {
+            .trust-strip {
+                grid-template-columns: 1fr;
+            }
+
+            .trust-item {
+                border-right: none;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .trust-item:last-child {
+                border-bottom: none;
+            }
         }
     </style>
 </head>
 <body>
-    <!-- Language Toggle -->
-    <div style="
-        position: absolute;
-        top: 20px;
-        right: 30px;
-        z-index: 9999;
-        background: rgba(255,255,255,0.9);
-        padding: 6px 12px;
-        border-radius: 10px;
-        font-size: 14px;
-    ">
-        <strong>{{ t("language") }}:</strong>
-        <a href="{{ url_for('set_lang', lang='en') }}">EN</a> |
-        <a href="{{ url_for('set_lang', lang='es') }}">ES</a>
+
+<!-- Topbar -->
+<header class="topbar">
+    <a class="topbar-logo" href="#">
+        <div class="logo-mark">Ac</div>
+        <span class="logo-text">{{ t("app_title") }}</span>
+    </a>
+    <div class="topbar-right">
+        <div class="lang-toggle">
+            <a href="{{ url_for('set_lang', lang='en') }}" class="{% if get_lang() == 'en' %}active{% endif %}">EN</a>
+            <div class="div"></div>
+            <a href="{{ url_for('set_lang', lang='es') }}" class="{% if get_lang() == 'es' %}active{% endif %}">ES</a>
+        </div>
+        <a href="{{ url_for('login') }}" class="btn btn-ghost">{{ t("login") }}</a>
+        <a href="{{ url_for('signup') }}" class="btn btn-primary">{{ t("signup") }}</a>
+    </div>
+</header>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        {{ t("home_badge") }}
+    </div>
+    <h1 class="hero-title">
+        {{ t("home_heading") }}<br>
+        <em>{{ t("hero_title_accent") }}</em>
+    </h1>
+    <p class="hero-sub">{{ t("home_tagline") }}</p>
+    <div class="hero-cta">
+        <a href="{{ url_for('signup') }}" class="btn btn-primary">
+            <i class="fas fa-rocket"></i> {{ t("signup") }}
+        </a>
+        <a href="{{ url_for('login') }}" class="btn btn-ghost">
+            <i class="fas fa-sign-in-alt"></i> {{ t("login") }}
+        </a>
     </div>
 
-    <div class="container">
-        <div class="header">
-            <h1>{{ t("home_heading") }}</h1>
-            <p>{{ t("home_tagline") }}</p>
+        <div class="trust-strip">
+        <div class="trust-item">
+            <span class="trust-title">Academic Workflows</span>
+            <span class="trust-text">Syllabus analysis, grading, research, and writing support</span>
         </div>
-        <div class="card">
-            <h2>{{ t("explore_features") }}</h2>
-            <p>{{ t("home_blurb") }}</p>
-            <div class="feature-list">
-                <div class="feature">
-                    <h3>{{ t("feat_generate_questions") }}</h3>
-                    <p>{{ t("feat_generate_questions_desc") }}</p>
-                </div>
-                <div class="feature">
-                    <h3>{{ t("feat_exam_papers") }}</h3>
-                    <p>{{ t("feat_exam_papers_desc") }}</p>
-                </div>
-                <div class="feature">
-                    <h3>{{ t("feat_core_concepts") }}</h3>
-                    <p>{{ t("feat_core_concepts_desc") }}</p>
-                </div>
-                <div class="feature">
-                    <h3>{{ t("feat_syllabus_analysis") }}</h3>
-                    <p>{{ t("feat_syllabus_analysis_desc") }}</p>
-                </div>
-                <div class="feature">
-                    <h3>{{ t("feat_recommendation_letters") }}</h3>
-                    <p>{{ t("feat_recommendation_letters_desc") }}</p>
-                </div>
-            </div>
-            <div class="options-menu">
-                <a href="{{ url_for('login') }}" class="option-btn">{{ t("login_to_get_started") }}</a>
-            </div>
+        <div class="trust-item">
+            <span class="trust-title">Supported Inputs</span>
+            <span class="trust-text">PDF, DOCX, PPT, PPTX, and TXT files</span>
+        </div>
+        <div class="trust-item">
+            <span class="trust-title">Structured Outputs</span>
+            <span class="trust-text">Clear summaries, questions, feedback, and formatted academic content</span>
+        </div>
+        <div class="trust-item">
+            <span class="trust-title">Secure Access</span>
+            <span class="trust-text">Login-protected workspace for academic tasks</span>
         </div>
     </div>
+</section>
+
+<!-- Features -->
+<section class="features-section">
+    <div class="section-header">
+        <span class="section-label">{{ t("explore_features") }}</span>
+        <h2 class="section-title">{{ t("what_you_can_do") }}</h2>
+        <p class="section-sub">{{ t("home_blurb") | default("Built for structured academic workflows including grading, syllabus analysis, chapter support, research drafting, and citation preparation.") }}</p>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-list-ol"></i></div>
+            <h3>{{ t("feat_generate_questions") }}</h3>
+            <p>{{ t("feat_generate_questions_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-clipboard-list"></i></div>
+            <h3>{{ t("feat_exam_papers") }}</h3>
+            <p>{{ t("feat_exam_papers_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-lightbulb"></i></div>
+            <h3>{{ t("feat_core_concepts") }}</h3>
+            <p>{{ t("feat_core_concepts_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-file-alt"></i></div>
+            <h3>{{ t("feat_syllabus_analysis") }}</h3>
+            <p>{{ t("feat_syllabus_analysis_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-envelope-open-text"></i></div>
+            <h3>{{ t("feat_recommendation_letters") }}</h3>
+            <p>{{ t("feat_recommendation_letters_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-check-double"></i></div>
+            <h3>{{ t("feat_grading") }}</h3>
+            <p>{{ t("feat_grading_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-search"></i></div>
+            <h3>{{ t("feat_research") }}</h3>
+            <p>{{ t("feat_research_desc") }}</p>
+        </div>
+        <div class="feature-card">
+            <div class="feature-icon"><i class="fas fa-quote-left"></i></div>
+            <h3>{{ t("feat_citation") }}</h3>
+            <p>{{ t("feat_citation_desc") }}</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section class="cta-section">
+    <div class="cta-box">
+        <h2>{{ t("login_to_get_started") }}</h2>
+        <p>{{ t("how_to_get_started_text") | default("Create an account to access the academic workspace, upload course materials, and begin using the assistant across teaching and learning tasks.") }}</p>
+        <a href="{{ url_for('signup') }}" class="btn btn-primary" style="font-size:1rem; padding:12px 32px;">
+            <i class="fas fa-rocket"></i> {{ t("signup") }}
+        </a>
+    </div>
+</section>
+
+<footer>
+    {{ t("app_title") }} &nbsp;·&nbsp; {{ t("privacy_policy") }}
+    &nbsp;·&nbsp; <a href="{{ url_for('login') }}" style="color:var(--accent); text-decoration:none;">{{ t("login") }}</a>
+</footer>
+
 </body>
 </html>

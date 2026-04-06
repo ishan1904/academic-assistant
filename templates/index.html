@@ -1,1632 +1,2716 @@
 <!DOCTYPE html>
 <html lang="{{ get_lang() }}">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{{ t("app_title") }}</title>
     <link rel="icon" type="image/png" href="{{ url_for('static', filename='image/favicon.png') }}?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
     <style>
+        /* ─── CSS Variables ─────────────────────────────────────────── */
+        :root {
+            --bg:          #0c0f14;
+            --bg-surface:  #131820;
+            --bg-card:     #1a2130;
+            --bg-card2:    #1f2a3d;
+            --border:      rgba(255,255,255,0.07);
+            --border-glow: rgba(84,180,255,0.25);
+            --accent:      #54b4ff;
+            --accent2:     #7dd3fc;
+            --accent-dim:  rgba(84,180,255,0.12);
+            --green:       #4ade80;
+            --amber:       #fbbf24;
+            --red:         #f87171;
+            --text-primary: #f0f4ff;
+            --text-secondary: #8fa3bf;
+            --text-muted:  #5a7290;
+            --radius:      12px;
+            --radius-lg:   18px;
+            --shadow:      0 8px 32px rgba(0,0,0,0.4);
+            --shadow-glow: 0 0 40px rgba(84,180,255,0.08);
+            --font-body:   'DM Sans', sans-serif;
+            --font-display:'DM Serif Display', serif;
+            --font-mono:   'JetBrains Mono', monospace;
+            --transition:  0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        /* ─── Reset & Base ──────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        html { scroll-behavior: smooth; }
+
         body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #eef2f3, #8e9eab);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text-primary);
             min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
         }
 
-        .container {
-            width: 90%;
-            max-width: 1200px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            overflow: hidden;
-            padding: 20px;
-        }
-
-        .header {
-            text-align: center;
-            padding: 10px 0;
-            background: #4CAF50;
-            color: white;
-            border-radius: 8px 8px 0 0;
-            margin: -20px -20px 20px -20px;
-        }
-
-        /* New Navigation Bar Styling */
-        .nav-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 10px 20px;
-            background: #f9f9f9;
-            border-bottom: 1px solid #ddd;
-            margin-bottom: 20px;
-        }
-
-        .nav-bar .welcome-user {
-            font-weight: bold;
-            color: #4CAF50;
-        }
-
-        .nav-bar a {
-            color: #4CAF50;
-            text-decoration: none;
-            padding: 5px 10px;
-            border-radius: 4px;
-            transition: background 0.3s;
-        }
-
-        .nav-bar a:hover {
-            background: #e0e0e0;
-        }
-
-        .nav-bar .logout-btn {
-            background: #ff4444;
-            color: white;
-        }
-
-        .nav-bar .logout-btn:hover {
-            background: #cc0000;
-        }
-
-        .card {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-            padding: 20px;
-            margin-bottom: 20px;
-        }
-
-        .options-menu {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-            justify-content: center;
-        }
-
-        .option-btn {
-            background: #4CAF50;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-            flex: 1;
-            max-width: 250px;
-        }
-
-        .option-btn:hover {
-            background: #45a049;
-        }
-
-        .option-btn.active {
-            background: #388E3C;
-        }
-
-        .content-section {
-            display: none;
-            padding: 20px;
-            border-top: 1px solid #ddd;
-        }
-
-        .content-section.active {
-            display: block;
-        }
-
-        h2 {
-            margin-bottom: 10px;
-        }
-
-        p {
-            margin-bottom: 15px;
-        }
-
-        label {
-            font-weight: bold;
-            margin-top: 10px;
-            display: block;
-        }
-
-        input,
-        select,
-        textarea,
-        button {
-            width: 100%;
-            margin-top: 5px;
-            padding: 10px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-        }
-
-        button {
-            background: #4CAF50;
-            color: white;
-            cursor: pointer;
-            border: none;
-            font-size: 16px;
-        }
-
-        button:hover {
-            background: #45a049;
-        }
-
-        .button-group {
-            display: flex;
-            gap: 10px;
-            margin-top: 10px;
-        }
-
-        .final-output {
-            padding: 10px;
-            background: #f9f9f9;
-            border-radius: 4px;
-            border: 1px solid #ccc;
-        }
-
-        .section-title {
-            font-weight: bold;
-            margin-top: 10px;
-        }
-
-        .error, .success {
-            text-align: center;
-            margin-top: 10px;
-            padding: 10px;
-            border-radius: 4px;
-        }
-
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-        }
-
-        .success {
-            background: #d4edda;
-            color: #155724;
-        }
-
-        /* Modal Styling */
-        .modal {
+        /* ─── Noise texture overlay ─────────────────────────────────── */
+        body::before {
+            content: '';
             position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── Topbar ────────────────────────────────────────────────── */
+        .topbar {
+            position: sticky;
             top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            display: none;
-            justify-content: center;
-            align-items: center;
-            background-color: rgba(0, 0, 0, 0.5);
             z-index: 1000;
-        }
-
-        .modal-content {
-            background-color: white;
-            border-radius: 8px;
-            padding: 25px;
-            width: 40%;
-            max-width: 500px;
-            box-shadow: 0px 4px 6px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            animation: fadeIn 0.3s ease-in-out;
-            position: relative;
-        }
-
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 15px;
-            font-size: 20px;
-            cursor: pointer;
-            color: #333;
-        }
-
-        .close-btn:hover {
-            color: red;
-        }
-
-        .modal-content button {
-            width: 48%;
-            padding: 12px;
-            margin: 10px 5px;
-            font-size: 15px;
-            border-radius: 6px;
-        }
-
-        /* Processing Screen Styling */
-        #processingScreen {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 2000;
-            justify-content: center;
+            display: flex;
             align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            height: 62px;
+            background: rgba(12,15,20,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
         }
 
-        #processingContent {
-            background: white;
-            padding: 20px;
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-mark {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            text-align: center;
-            width: 300px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            font-family: var(--font-mono);
+            flex-shrink: 0;
         }
 
-        #processingIcon {
-            font-size: 24px;
-            color: #3498db;
-            margin-bottom: 10px;
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            color: var(--text-primary);
+            letter-spacing: 0.01em;
         }
 
-        #loadingSpinner {
-            border: 4px solid #f3f3f3;
-            border-top: 4px solid #3498db;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 20px auto;
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: scale(0.9);
-            }
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
-        }
-        .section-output {
-            background: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 10px;
-            padding: 18px;
-        }
-
-        .section-output h4 {
-            margin-top: 12px;
-            margin-bottom: 6px;
-            color: #2e7d32;
-            font-size: 16px;
-        }
-
-        .section-output ul {
-            padding-left: 20px;
-        }
-
-        .section-output li {
-            margin-bottom: 6px;
-            line-height: 1.4;
-        }
-
-        .ui-block {
-            margin-bottom: 14px;
-        }
-
-        .ui-error {
-            background: #ffecec;
-            border: 1px solid #ffb3b3;
-            color: #a10000;
-            padding: 12px;
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
             border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.78rem;
             font-weight: 500;
         }
 
-        .exam-student-block {
-            border: 1px solid #e5e5e5;
-            border-radius: 10px;
-            padding: 12px 14px;
-            margin: 12px 0;
-            background: #fff;
+        .lang-toggle a {
+            padding: 5px 12px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
         }
 
-        .exam-student-title {
-            margin: 0 0 10px 0;
-            font-size: 16px;
+        .lang-toggle a.active,
+        .lang-toggle a:hover {
+            background: var(--accent-dim);
+            color: var(--accent);
         }
 
-        .exam-question-list {
-            margin: 0;
-            padding-left: 18px;
+        .lang-toggle .divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
         }
 
-        .exam-question-item {
-            margin-bottom: 12px;
-            line-height: 1.4;
-        }
-
-        .q-title {
-            margin-bottom: 6px;
-        }
-
-        .q-meta {
+        .user-chip {
             display: flex;
-            gap: 14px;
-            font-size: 13px;
-            opacity: 0.85;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px 5px 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            font-size: 0.82rem;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-name { color: var(--text-secondary); }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-family: var(--font-body);
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .btn-ghost:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            border-color: rgba(248,113,113,0.3);
+            color: var(--red);
+        }
+        .btn-danger:hover {
+            background: rgba(248,113,113,0.2);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* ─── Hero ──────────────────────────────────────────────────── */
+        .hero {
+            position: relative;
+            padding: 72px 32px 60px;
+            max-width: 1200px;
+            margin: 0 auto;
+            z-index: 1;
+        }
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 4px 14px;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-glow);
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: var(--accent);
+            font-family: var(--font-mono);
+            letter-spacing: 0.06em;
+            margin-bottom: 24px;
+        }
+
+        .hero-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(0.8); }
+        }
+
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: clamp(2.4rem, 5vw, 3.6rem);
+            line-height: 1.12;
+            color: var(--text-primary);
+            margin-bottom: 20px;
+            max-width: 720px;
+        }
+
+        .hero-title em {
+            font-style: italic;
+            color: var(--accent);
+            background: linear-gradient(90deg, var(--accent), #a78bfa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .hero-sub {
+            font-size: 1rem;
+            color: var(--text-secondary);
+            max-width: 560px;
+            margin-bottom: 36px;
+            line-height: 1.7;
+        }
+
+        .hero-features {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .feature-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            padding: 7px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            transition: var(--transition);
+        }
+        .feature-pill i { color: var(--accent); font-size: 0.75rem; }
+        .feature-pill:hover {
+            border-color: var(--border-glow);
+            color: var(--text-primary);
+            background: var(--bg-card2);
+        }
+
+        /* Decorative glow blobs */
+        .hero::after {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -80px;
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, rgba(84,180,255,0.07) 0%, transparent 70%);
+            pointer-events: none;
+            z-index: -1;
+        }
+
+
+        /* ─── Quick Actions ───────────────────────────────────────── */
+        .quick-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 22px;
+        }
+
+        .quick-action {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 9px 16px;
+            border-radius: 999px;
+            border: 1px solid var(--border);
+            background: var(--bg-card);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            cursor: pointer;
+            transition: var(--transition);
+            text-decoration: none;
+        }
+
+        .quick-action:hover {
+            border-color: var(--border-glow);
+            color: var(--text-primary);
+            background: var(--bg-card2);
+        }
+
+        .quick-action.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-color: var(--border-glow);
+            box-shadow: inset 0 0 0 1px rgba(84,180,255,0.08);
+        }
+
+        .workspace-note {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 18px;
+            padding: 12px 16px;
+            background: rgba(84,180,255,0.05);
+            border: 1px solid rgba(84,180,255,0.14);
+            border-radius: var(--radius);
+            color: var(--text-secondary);
+            font-size: 0.84rem;
+            line-height: 1.6;
+        }
+
+        .workspace-note i {
+            color: var(--accent);
+            flex-shrink: 0;
+        }
+
+        /* ─── Status Bar ─────────────────────────────────────────────── */
+        .status-bar {
+            display: flex;
+            gap: 12px;
+            padding: 0 32px 28px;
+            max-width: 1200px;
+            margin: 0 auto;
+            flex-wrap: wrap;
+            z-index: 1;
+            position: relative;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.8rem;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-dot.green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+        .status-dot.amber { background: var(--amber); }
+        .status-dot.blue  { background: var(--accent); }
+
+        .status-label { color: var(--text-muted); }
+        .status-val   { color: var(--text-secondary); font-family: var(--font-mono); font-size: 0.76rem; }
+
+        /* ─── Main Layout ───────────────────────────────────────────── */
+        .main-layout {
+            display: grid;
+            grid-template-columns: 220px 1fr;
+            gap: 24px;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 32px 64px;
+            z-index: 1;
+            position: relative;
+        }
+
+        /* ─── Sidebar Nav ───────────────────────────────────────────── */
+        .sidebar {
+            position: sticky;
+            top: 82px;
+            height: fit-content;
+        }
+
+        .sidebar-label {
+            font-size: 0.68rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            text-transform: uppercase;
+            padding: 0 12px;
+            margin-bottom: 8px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 12px;
+            border-radius: var(--radius);
+            cursor: pointer;
+            font-size: 0.88rem;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            border: 1px solid transparent;
+            margin-bottom: 3px;
+            user-select: none;
+        }
+        .nav-item i {
+            width: 16px;
+            text-align: center;
+            font-size: 0.82rem;
+            opacity: 0.7;
+            transition: var(--transition);
+        }
+        .nav-item:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-color: var(--border);
+        }
+        .nav-item:hover i { opacity: 1; }
+        .nav-item.active {
+            background: var(--accent-dim);
+            color: var(--accent);
+            border-color: var(--border-glow);
+        }
+        .nav-item.active i { color: var(--accent); opacity: 1; }
+
+        .sidebar-sep {
+            height: 1px;
+            background: var(--border);
+            margin: 12px 0;
+        }
+
+        /* ─── Content Area ──────────────────────────────────────────── */
+        .content-area {}
+
+        .section-panel {
+            display: none;
+            animation: fadeUp 0.3s ease;
+        }
+        .section-panel.active { display: block; }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ─── Card ──────────────────────────────────────────────────── */
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 28px;
+            margin-bottom: 20px;
+            transition: var(--transition);
+        }
+
+        .card:hover { border-color: rgba(255,255,255,0.1); }
+
+        .card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .card-title-group {}
+        .card-icon {
+            width: 40px;
+            height: 40px;
+            background: var(--accent-dim);
+            border: 1px solid var(--border-glow);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            color: var(--accent);
+            flex-shrink: 0;
+            margin-bottom: 14px;
+        }
+
+        .card-title {
+            font-family: var(--font-display);
+            font-size: 1.4rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .card-desc {
+            font-size: 0.87rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* ─── Form Elements ─────────────────────────────────────────── */
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .field {
+            margin-bottom: 16px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 0.8rem;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 7px;
+            letter-spacing: 0.02em;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 10px 14px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-family: var(--font-body);
+            transition: var(--transition);
+            outline: none;
+        }
+
+        .field input::placeholder,
+        .field textarea::placeholder { color: var(--text-muted); }
+
+        .field input:focus,
+        .field select:focus,
+        .field textarea:focus {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(84,180,255,0.1);
+        }
+
+        .field select {
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' fill='none'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%235a7290' stroke-width='1.5' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            padding-right: 36px;
+        }
+
+        .field select option { background: var(--bg-card); }
+
+        .field input[type="file"] {
+            padding: 12px;
+            cursor: pointer;
+            color: var(--text-muted);
+        }
+        .field input[type="file"]::-webkit-file-upload-button {
+            background: var(--accent-dim);
+            border: 1px solid var(--border-glow);
+            color: var(--accent);
+            padding: 6px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: var(--font-body);
+            font-size: 0.82rem;
+            margin-right: 10px;
+            transition: var(--transition);
+        }
+        .field input[type="file"]::-webkit-file-upload-button:hover {
+            background: rgba(84,180,255,0.2);
+        }
+
+        /* ─── Buttons ───────────────────────────────────────────────── */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 22px;
+            border-radius: var(--radius);
+            font-size: 0.9rem;
+            font-weight: 500;
+            font-family: var(--font-body);
+            cursor: pointer;
+            transition: var(--transition);
+            border: none;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: #0c0f14;
+            font-weight: 600;
+        }
+        .btn-primary:hover {
+            background: var(--accent2);
+            transform: translateY(-1px);
+            box-shadow: 0 6px 20px rgba(84,180,255,0.25);
+        }
+
+        .btn-secondary {
+            background: var(--bg-card2);
+            color: var(--text-secondary);
+            border: 1px solid var(--border);
+        }
+        .btn-secondary:hover {
+            background: var(--bg-card);
+            color: var(--text-primary);
+            border-color: rgba(255,255,255,0.12);
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--accent);
+            border: 1px solid var(--border-glow);
+        }
+        .btn-outline:hover {
+            background: var(--accent-dim);
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 6px;
+        }
+
+        .btn[disabled], .btn:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none !important;
+            box-shadow: none !important;
+        }
+
+        /* ─── Output Panel ──────────────────────────────────────────── */
+        .output-panel {
+            display: none;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            overflow: hidden;
+            margin-top: 20px;
+        }
+
+        .output-panel.visible { display: block; }
+
+        .output-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--border);
+            background: var(--bg-card);
+        }
+
+        .output-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-family: var(--font-mono);
+            letter-spacing: 0.04em;
+        }
+
+        .output-title i { color: var(--green); }
+
+        .output-actions { display: flex; gap: 8px; }
+
+        .output-body {
+            padding: 20px;
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .output-body::-webkit-scrollbar { width: 6px; }
+        .output-body::-webkit-scrollbar-track { background: transparent; }
+        .output-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+        .output-pre {
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            line-height: 1.7;
+            color: var(--text-primary);
+            white-space: pre-wrap;
+        }
+
+        /* ─── Info Callout ──────────────────────────────────────────── */
+        .callout {
+            display: flex;
+            gap: 12px;
+            padding: 14px 18px;
+            border-radius: var(--radius);
+            font-size: 0.84rem;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+
+        .callout i { flex-shrink: 0; margin-top: 2px; }
+        .callout.info {
+            background: rgba(84,180,255,0.06);
+            border: 1px solid rgba(84,180,255,0.2);
+            color: var(--text-secondary);
+        }
+        .callout.info i { color: var(--accent); }
+        .callout.warning {
+            background: rgba(251,191,36,0.06);
+            border: 1px solid rgba(251,191,36,0.2);
+            color: var(--text-secondary);
+        }
+        .callout.warning i { color: var(--amber); }
+        .callout.success {
+            background: rgba(74,222,128,0.06);
+            border: 1px solid rgba(74,222,128,0.2);
+            color: var(--text-secondary);
+        }
+        .callout.success i { color: var(--green); }
+
+        /* ─── Flash messages ────────────────────────────────────────── */
+        .flash-error {
+            padding: 12px 18px;
+            background: rgba(248,113,113,0.1);
+            border: 1px solid rgba(248,113,113,0.3);
+            border-radius: var(--radius);
+            color: var(--red);
+            font-size: 0.87rem;
+            margin-bottom: 18px;
+        }
+        .flash-success {
+            padding: 12px 18px;
+            background: rgba(74,222,128,0.08);
+            border: 1px solid rgba(74,222,128,0.25);
+            border-radius: var(--radius);
+            color: var(--green);
+            font-size: 0.87rem;
+            margin-bottom: 18px;
+        }
+
+        /* ─── Soft Warning ──────────────────────────────────────────── */
+        .soft-warning {
+            margin-top: 8px;
+            padding: 10px 14px;
+            border: 1px solid rgba(251,191,36,0.3);
+            background: rgba(251,191,36,0.06);
+            color: #c4962a;
+            border-radius: var(--radius);
+            font-size: 0.82rem;
+            line-height: 1.5;
+            display: none;
+        }
+
+        /* ─── Modal ─────────────────────────────────────────────────── */
+        .modal {
+            position: fixed;
+            inset: 0;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            background: rgba(0,0,0,0.6);
+            backdrop-filter: blur(6px);
+            z-index: 2000;
+            padding: 20px;
+        }
+        .modal.open { display: flex; }
+
+        .modal-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px;
+            width: 100%;
+            max-width: 480px;
+            box-shadow: var(--shadow);
+            animation: fadeUp 0.25s ease;
+            position: relative;
+        }
+
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            width: 30px; height: 30px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: 50%;
+            cursor: pointer;
+            color: var(--text-muted);
+            font-size: 14px;
+            transition: var(--transition);
+        }
+        .modal-close:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.15); }
+
+        .modal-title {
+            font-family: var(--font-display);
+            font-size: 1.3rem;
+            margin-bottom: 6px;
+            color: var(--text-primary);
+        }
+        .modal-sub {
+            font-size: 0.84rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+        }
+
+        /* ─── Processing overlay ────────────────────────────────────── */
+        #processingScreen {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.65);
+            backdrop-filter: blur(8px);
+            z-index: 3000;
+            justify-content: center;
+            align-items: center;
+        }
+        #processingScreen.show { display: flex; }
+
+        .processing-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 40px 48px;
+            text-align: center;
+            box-shadow: var(--shadow);
+            min-width: 280px;
+        }
+
+        .spinner-ring {
+            width: 44px;
+            height: 44px;
+            border: 3px solid var(--bg-card2);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto 18px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .processing-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+
+        .processing-sub {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+        }
+
+        /* ─── Grading Results ───────────────────────────────────────── */
+        .grade-results-area {
+            display: none;
+            margin-top: 20px;
+        }
+
+        /* ─── Citation box ──────────────────────────────────────────── */
+        .citation-box {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            line-height: 1.7;
+        }
+
+        /* ─── Privacy Panel ─────────────────────────────────────────── */
+        .privacy-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .privacy-item {
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 18px;
+        }
+
+        .privacy-item-icon {
+            font-size: 1.1rem;
+            margin-bottom: 10px;
+        }
+
+        .privacy-item h4 {
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: var(--text-primary);
             margin-bottom: 6px;
         }
 
-        .q-answer summary {
+        .privacy-item p {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        .privacy-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.73rem;
+            font-weight: 500;
+            font-family: var(--font-mono);
+        }
+        .privacy-tag.green { background: rgba(74,222,128,0.1); color: var(--green); }
+        .privacy-tag.amber { background: rgba(251,191,36,0.1); color: var(--amber); }
+        .privacy-tag.blue  { background: var(--accent-dim); color: var(--accent); }
+
+        /* ─── Section headers ───────────────────────────────────────── */
+        .section-heading {
+            font-family: var(--font-display);
+            font-size: 1.6rem;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+        }
+        .section-sub {
+            font-size: 0.87rem;
+            color: var(--text-muted);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        /* ─── Radio toggle ──────────────────────────────────────────── */
+        .radio-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 16px;
+        }
+        .radio-option {
+            flex: 1;
+            position: relative;
+        }
+        .radio-option input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            width: 0; height: 0;
+        }
+        .radio-option label {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 7px;
+            padding: 9px 14px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            font-size: 0.85rem;
+            color: var(--text-muted);
             cursor: pointer;
+            transition: var(--transition);
+            margin: 0;
+        }
+        .radio-option input:checked + label {
+            background: var(--accent-dim);
+            border-color: var(--border-glow);
+            color: var(--accent);
+        }
+        .radio-option label:hover {
+            background: var(--bg-card2);
+            border-color: rgba(255,255,255,0.1);
+            color: var(--text-primary);
         }
 
-        .section-output-pre {
-        font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif !important;
-        font-size: 16px !important;
-        line-height: 1.6 !important;
-        white-space: normal !important;
+        /* ─── Exam question blocks ──────────────────────────────────── */
+        .exam-student-block {
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin: 12px 0;
+            background: var(--bg-surface);
         }
-
-        .exam-student-title { font-size: 18px; font-weight: 700; }
-
-        .q-title { font-size: 16px; font-weight: 600; margin-bottom: 8px; }
-
-        .q-answer-preview { margin: 8px 0; }
-
-        .q-answer-body { white-space: pre-wrap; padding-top: 6px; }
-
-        .q-meta { font-size: 14px; opacity: 0.85; margin-top: 10px; display:flex; gap:16px; }
-
-        .pretty-p { margin: 8px 0; line-height: 1.6; font-size: 16px; }
-        .p-gap { height: 10px; }
-
+        .exam-student-title { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); margin-bottom: 10px; }
+        .exam-question-item { margin-bottom: 10px; line-height: 1.5; font-size: 0.87rem; color: var(--text-secondary); }
+        .q-title { font-weight: 500; color: var(--text-primary); }
+        .q-meta { display: flex; gap: 14px; font-size: 0.78rem; opacity: 0.7; margin-top: 6px; }
+        .q-answer summary { cursor: pointer; font-size: 0.8rem; color: var(--accent); }
+        .q-answer-body { white-space: pre-wrap; padding-top: 6px; font-size: 0.82rem; color: var(--text-muted); }
+        .section-output-pre { font-family: var(--font-body); font-size: 0.92rem; line-height: 1.7; white-space: pre-wrap; }
+        .pretty-p { margin: 8px 0; line-height: 1.6; }
         .pretty-list { margin: 10px 0 10px 18px; }
-        .pretty-list li { margin: 6px 0; line-height: 1.55; font-size: 16px; }
+        .pretty-list li { margin: 5px 0; line-height: 1.55; }
+        .letter-box { font-size: 0.92rem; line-height: 1.7; }
+        .letter-p { margin: 8px 0; }
+        .pretty-text { font-size: 0.92rem; line-height: 1.6; }
+        .ui-error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); color: var(--red); padding: 12px; border-radius: var(--radius); }
+        .p-gap { height: 8px; }
 
-        .letter-box { font-size: 16px; line-height: 1.7; }
-        .letter-p { margin: 10px 0; }
-        .pretty-text { font-size: 16px; line-height: 1.6; }
+        /* ─── Responsive ────────────────────────────────────────────── */
+        @media (max-width: 900px) {
 
-        .soft-warning{
-        margin-top: 8px;
-        padding: 10px 12px;
-        border: 1px solid #f0c36d;
-        background: #fff8e5;
-        color: #5a4400;
-        border-radius: 8px;
-        font-size: 14px;
-        line-height: 1.4;
+            .quick-actions { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+            .quick-action { white-space: nowrap; }
+            .topbar-right { gap: 8px; }
+            .main-layout { grid-template-columns: 1fr; }
+            .sidebar { position: static; }
+            .hero { padding: 40px 20px 32px; }
+            .status-bar { padding: 0 20px 20px; }
+            .main-layout { padding: 0 20px 48px; }
+            .topbar { padding: 0 20px; }
+            .form-row { grid-template-columns: 1fr; }
+            .privacy-grid { grid-template-columns: 1fr; }
         }
-        .soft-warning strong{ font-weight: 600; }
 
+        @media (max-width: 640px) {
+            .sidebar { display: flex; flex-wrap: wrap; gap: 6px; }
+            .sidebar-label, .sidebar-sep { display: none; }
+            .nav-item { padding: 8px 12px; font-size: 0.8rem; }
+        }
 
+        /* ─── Utility ───────────────────────────────────────────────── */
+        .mt-0 { margin-top: 0; }
+        .mb-0 { margin-bottom: 0; }
+        .mt-4 { margin-top: 4px; }
+        .mt-8 { margin-top: 8px; }
+        .copy-btn { cursor: pointer; }
+        .hidden { display: none !important; }
 
+       .output-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
 
+        .output-item,
+        .output-section {
+            background: rgba(255,255,255,0.02);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px 14px;
+            height: auto;
+            min-height: unset;
+            display: block;
+        }
+
+        .output-item-title,
+        .output-section-title {
+            font-size: 0.98rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0 0 6px 0;
+            line-height: 1.35;
+        }
+
+        .output-item-body,
+        .output-section p,
+        .output-section li {
+            font-size: 0.9rem;
+            line-height: 1.58;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .output-item-body:empty {
+            display: none;
+        }
+
+        .output-section ul {
+            margin: 0 0 0 18px;
+            padding: 0;
+        }
+
+        .output-section li {
+            margin: 4px 0;
+        }
+
+        .output-section + .output-section,
+        .output-item + .output-item {
+            margin-top: 0;
+        }
+
+        .output-section ul {
+            margin: 0 0 0 18px;
+            padding: 0;
+        }
+
+        .output-section li {
+            margin: 6px 0;
+            color: var(--text-secondary);
+            line-height: 1.6;
+        }
+
+        .output-section p {
+            margin: 0;
+            color: var(--text-secondary);
+            line-height: 1.65;
+        }
+
+        .output-render {
+            display: block;
+            width: 100%;
+            white-space: normal;
+        }
+
+        .output-body {
+            padding: 14px;
+            max-height: 540px;
+            overflow-y: auto;
+        }
+
+        .output-pre,
+        .section-output-pre {
+            font-family: var(--font-body);
+            font-size: 0.92rem;
+            line-height: 1.6;
+            color: var(--text-primary);
+            white-space: normal;
+        }
     </style>
 </head>
-
 <body>
-    <div class="container">
-        <!-- Header -->
-        <div class="header">
-            <h1>{{ t("app_title") }}</h1>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     TOPBAR
+════════════════════════════════════════════════════════════════════ -->
+<header class="topbar">
+    <a class="topbar-logo" href="#">
+        <div class="logo-mark">Ac</div>
+        <span class="logo-text">{{ t("app_title") }}</span>
+    </a>
+
+    <div class="topbar-right">
+        <!-- Language Toggle (dynamic, no hardcoded words) -->
+        <div class="lang-toggle">
+            <a href="{{ url_for('set_lang', lang='en') }}"
+               class="{% if get_lang() == 'en' %}active{% endif %}">EN</a>
+            <div class="divider"></div>
+            <a href="{{ url_for('set_lang', lang='es') }}"
+               class="{% if get_lang() == 'es' %}active{% endif %}">ES</a>
         </div>
 
-        <!-- Navigation Bar -->
-        <div class="nav-bar">
-            {% if session.username %}
-                <span class="welcome-user">{{ t("welcome") }}, {{ session.username }}!</span>
-                <a href="{{ url_for('logout') }}" class="logout-btn">{{ t("logout") }}</a>
-            {% else %}
-                <span></span> <!-- Placeholder to maintain layout -->
-                <div>
-                    <a href="{{ url_for('login') }}">{{ t("login") }}</a>
-                    <a href="{{ url_for('signup') }}">{{ t("signup") }}</a>
-                </div>
-            {% endif %}
+        {% if session.username %}
+        <div class="user-chip">
+            <div class="user-avatar">{{ session.username[0]|upper }}</div>
+            <span class="user-name">{{ session.username }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn-ghost btn-danger">
+            <i class="fas fa-sign-out-alt"></i> {{ t("logout") }}
+        </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn-ghost">
+            <i class="fas fa-sign-in-alt"></i> {{ t("login") }}
+        </a>
+        <a href="{{ url_for('signup') }}" class="btn btn-primary" style="padding:6px 16px; font-size:0.82rem;">
+            {{ t("signup") }}
+        </a>
+        {% endif %}
+    </div>
+</header>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════════════════════════ -->
+<section class="hero">
+    <div class="hero-badge">
+        <span class="dot"></span>
+        {{ t('hero_badge') | default('AI-Powered Academic Platform') }}
+    </div>
+    <h1 class="hero-title">{{ t('welcome_heading') }} <em>{{ t('hero_title_accent') | default('Academic Intelligence') }}</em></h1>
+    <p class="hero-sub">{{ t('welcome_blurb') }}</p>
+
+    <div class="quick-actions" id="quick-actions">
+        <button type="button" class="quick-action active" data-section="syllabus" onclick="showSection('syllabus')">
+            <i class="fas fa-file-alt"></i> {{ t('syllabus_enhancement') }}
+        </button>
+        <button type="button" class="quick-action" data-section="chapter" onclick="showSection('chapter')">
+            <i class="fas fa-book-open"></i> {{ t('chapter_insights_questions') }}
+        </button>
+        <button type="button" class="quick-action" data-section="resume" onclick="showSection('resume')">
+            <i class="fas fa-envelope-open-text"></i> {{ t('recommendation_letter_assistance') }}
+        </button>
+        <button type="button" class="quick-action" data-section="exam" onclick="showSection('exam')">
+            <i class="fas fa-clipboard-list"></i> {{ t('exam_questions_generation') }}
+        </button>
+        <button type="button" class="quick-action" data-section="grade" onclick="showSection('grade')">
+            <i class="fas fa-check-double"></i> {{ t('grading') }}
+        </button>
+        <button type="button" class="quick-action" data-section="research" onclick="showSection('research')">
+            <i class="fas fa-search"></i> {{ t('research_assistant') | default('Research Assistant') }}
+        </button>
+    </div>
+
+
+</section>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     STATUS BAR
+════════════════════════════════════════════════════════════════════ -->
+<div class="status-bar">
+    <div class="status-item">
+        <div class="status-dot green"></div>
+        <span class="status-label">{{ t('status_cache') | default('Cache') }}</span>
+        <span class="status-val">{{ t('status_active') | default('ACTIVE') }}</span>
+    </div>
+    <div class="status-item">
+        <div class="status-dot blue"></div>
+        <span class="status-label">{{ t('status_models') | default('Models') }}</span>
+        <span class="status-val">OpenAI · Claude · Groq · Gemini</span>
+    </div>
+    <div class="status-item">
+        <div class="status-dot amber"></div>
+        <span class="status-label">{{ t('status_auth') | default('Auth') }}</span>
+        <span class="status-val">{{ t('status_session') | default('SESSION + BCRYPT') }}</span>
+    </div>
+    <div class="status-item">
+        <div class="status-dot green"></div>
+        <span class="status-label">{{ t('status_storage') | default('DB') }}</span>
+        <span class="status-val">PostgreSQL / SQLite</span>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MAIN LAYOUT
+════════════════════════════════════════════════════════════════════ -->
+<div class="main-layout">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-label">{{ t('tools_label') | default('Tools') }}</div>
+
+        <div class="nav-item active" data-section="syllabus" onclick="showSection('syllabus')">
+            <i class="fas fa-file-alt"></i> {{ t('syllabus_enhancement') }}
+        </div>
+        <div class="nav-item" data-section="chapter" onclick="showSection('chapter')">
+            <i class="fas fa-book-open"></i> {{ t('chapter_insights_questions') }}
+        </div>
+        <div class="nav-item" data-section="resume" onclick="showSection('resume')">
+            <i class="fas fa-envelope-open-text"></i> {{ t('recommendation_letter_assistance') }}
+        </div>
+        <div class="nav-item" data-section="exam" onclick="showSection('exam')">
+            <i class="fas fa-clipboard-list"></i> {{ t('exam_questions_generation') }}
+        </div>
+        <div class="nav-item" data-section="grade" onclick="showSection('grade')">
+            <i class="fas fa-check-double"></i> {{ t('grading') }}
+        </div>
+        <div class="nav-item" data-section="research" onclick="showSection('research')">
+            <i class="fas fa-search"></i> {{ t('research_assistant') | default('Research') }}
+        </div>
+        <div class="nav-item" data-section="citation" onclick="showSection('citation')">
+            <i class="fas fa-quote-left"></i> {{ t('citation_tool') | default('Citations') }}
         </div>
 
-        <!-- Language Toggle -->
-        <div style="
-                position: absolute;
-                top: 20px;
-                right: 30px;
-                z-index: 9999;
-                background: rgba(255,255,255,0.9);
-                padding: 6px 12px;
-                border-radius: 10px;
-                font-size: 14px;
-            ">
-                <strong>{{ t("language") }}:</strong>
-                <a href="{{ url_for('set_lang', lang='en') }}">EN</a> |
-                <a href="{{ url_for('set_lang', lang='es') }}">ES</a>
+        <div class="sidebar-sep"></div>
+        <div class="sidebar-label">{{ t('info_label') | default('Info') }}</div>
+        <div class="nav-item" data-section="privacy" onclick="showSection('privacy')">
+            <i class="fas fa-shield-alt"></i> {{ t('privacy_policy') | default('Privacy Policy') }}
+        </div>
+        <div class="nav-item" data-section="architecture" onclick="showSection('architecture')">
+            <i class="fas fa-sitemap"></i> {{ t('architecture') | default('Architecture') }}
+        </div>
+    </nav>
+
+    <!-- Content -->
+    <main class="content-area">
+
+        <!-- Flash messages -->
+        {% if error %}
+        <div class="flash-error"><i class="fas fa-exclamation-circle"></i> {{ error }}</div>
+        {% endif %}
+        {% if success %}
+        <div class="flash-success"><i class="fas fa-check-circle"></i> {{ success }}</div>
+        {% endif %}
+
+        <!-- ────────────────────────────────────────────────────────
+             SYLLABUS SECTION
+        ──────────────────────────────────────────────────────────── -->
+        <div id="syllabus-section" class="section-panel active">
+            <div class="workspace-note">
+                <i class="fas fa-circle-info"></i>
+                <span>{{ t('workspace_note') | default('Use the tool navigation to move between modules. Results stay in the same workspace so the dashboard feels consistent and easier to use.') }}</span>
             </div>
+            <p class="section-heading">{{ t('syllabus_enhancement') }}</p>
+            <p class="section-sub">{{ t('syllabus_upload_desc') }}</p>
 
-        <!-- Welcome Section -->
-        <section class="welcome">
-            <h1>{{ t('welcome_heading') }}</h1>
-            <p>{{ t('welcome_blurb') }}</p>
-
-            <h3>{{ t('what_you_can_do') }}</h3>
-            <ul>
-            <li>
-                <strong>{{ t('syllabus_enhancement') }}:</strong>
-                {{ t('syllabus_enhancement_desc') }}
-            </li>
-
-            <li>
-                <strong>{{ t('chapter_insights_questions') }}:</strong>
-                {{ t('chapter_insights_questions_desc') }}
-            </li>
-
-            <li>
-                <strong>{{ t('recommendation_letter_assistance') }}:</strong>
-                {{ t('recommendation_letter_assistance_desc') }}
-            </li>
-
-            <li>
-                <strong>{{ t('exam_questions_generation') }}:</strong>
-                {{ t('exam_questions_generation_desc') }}
-            </li>
-
-            <li>
-                <strong>{{ t('grading') }}:</strong>
-                {{ t('grading_desc') }}
-            </li>
-            </ul>
-
-
-            <p><strong>{{ t('how_to_get_started') }}</strong> {{ t('how_to_get_started_text') }} </p>
-        </section>
-
-        <!-- Main Card -->
-        <div class="card">
-            <!-- Options Menu -->
-            <div class="options-menu">
-                <button class="option-btn" onclick="showSection('syllabus')">{{ t('syllabus_enhancement') }}</button>
-                <button class="option-btn" onclick="showSection('chapter')">{{ t('chapter_insights_questions') }}</button>
-                <button class="option-btn" onclick="showSection('resume')">{{ t('recommendation_letter_assistance') }}</button>
-                <button class="option-btn" onclick="showSection('exam')">{{ t('exam_questions_generation') }}</button>
-                <button class="option-btn" onclick="showSection('grade')">{{ t('grading') }}</button>
-                <button class="option-btn" onclick="showSection('research')">Research Assistant</button>
-              </div>
-
-
-            <!-- Content Sections -->
-            <div id="syllabus-section" class="content-section active">
-                <h2>{{ t('syllabus_enhancement') }}</h2>
-                <p>{{ t('syllabus_upload_desc') }}</p>
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-file-alt"></i></div>
                 <form action="/upload" method="POST" enctype="multipart/form-data" id="syllabusForm">
-                    <label for="file">{{ t('choose_pdf_docx') }}</label>
-                    <input type="file" id="file" name="file" accept=".pdf, .docx" required>
-
-                    <label for="ai_model">{{ t('select_ai_model') }}</label>
-                    <select id="ai_model" name="ai_model">
-                        <option value="openai">OpenAI</option>
-                        <option value="claude">Claude</option>
-                    </select>
-
-                    <button type="submit" name="action" value="structured">{{ t('enhance_syllabus_btn') }}</button>
-                </form>
-
-                <div class="section-output final-output" style="display:none; margin-top:16px;">
-                    <div class="section-title">Output</div>
-                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
-                </div>
-
-            </div>
-
-            <div id="chapter-section" class="content-section">
-                <h2>{{ t('chapter_insights_questions') }}</h2>
-                <p>{{ t('chapter_upload_desc') }}</p>
-                <form id="chapterForm" action="/upload" method="POST" enctype="multipart/form-data">
-                    <label for="chapter_file">{{ t('choose_pdf_ppt') }}</label>
-                    <input type="hidden" name="action" id="chapter_action" value="">
-
-                    <input type="file" id="chapter_file" name="chapter_file" accept=".pdf, .ppt, .pptx" required>
-
-                    <label for="chapter_ai_model">{{ t('select_ai_model') }}</label>
-                    <select id="chapter_ai_model" name="ai_model">
-                        <option value="openai">OpenAI</option>
-                        <option value="claude">Claude</option>
-                    </select>
-
-                    <div class="button-group">
-                        <button type="button" onclick="showModal()">{{ t('customize_questions') }}</button>
-                        <button type="button" onclick="submitChapterConcepts()">{{ t('extract_core_concepts') }}</button>
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('choose_pdf_docx') }}</label>
+                            <input type="file" id="file" name="file" accept=".pdf,.docx" required>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('select_ai_model') }}</label>
+                            <select id="ai_model" name="ai_model">
+                                <option value="openai">OpenAI GPT-4o mini</option>
+                                <option value="claude">Claude Sonnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="submit" name="action" value="structured" class="btn btn-primary">
+                            <i class="fas fa-magic"></i> {{ t('enhance_syllabus_btn') }}
+                        </button>
                     </div>
                 </form>
-                
-
-
-                <div class="section-output final-output" style="display:none; margin-top:16px;">
-                    <div class="section-title">Output</div>
-                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
-                </div>
-
             </div>
 
-            <div id="resume-section" class="content-section">
-                <h2>{{ t('recommendation_letter_assistance') }}</h2>
-                <p>{{ t('resume_upload_desc') }}</p>
-                <form id="recUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-                    <label for="resume_file">{{ t('choose_pdf_docx') }}</label>
-                    <input type="file" id="resume_file" name="resume_file" accept=".pdf, .docx" required>
-
-                    <label for="rec_ai_model">{{ t('select_ai_model') }}</label>
-                    <select id="rec_ai_model" name="ai_model">
-                        <option value="openai">OpenAI</option>
-                        <option value="claude">Claude</option>
-                    </select>
-
-                    <button type="button" onclick="showRecModal()">{{ t('generate_recommendation_letter') }}</button>
-                </form>
-
-                <div class="section-output final-output" style="display:none; margin-top:16px;">
-                    <div class="section-title">Output</div>
-                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
+            <div class="output-panel" id="syllabus-output">
+                <div class="output-header">
+                    <div class="output-title"><i class="fas fa-circle"></i> {{ t('output_label') | default('OUTPUT') }}</div>
+                    <div class="output-actions">
+                        <button class="btn-ghost" onclick="copyOutput('syllabus-output-pre')" style="padding:4px 10px; font-size:0.75rem;">
+                            <i class="fas fa-copy"></i> {{ t('copy') | default('Copy') }}
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <div id="exam-section" class="content-section">
-                <h2>{{ t('exam_questions_generation') }}</h2>
-                <p>{{ t('exam_upload_desc') }}</p>
-                <form id="examUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
-                    <label for="exam_files">Choose PPTX/PPT or PDF files:</label>
-                    <input type="file" id="exam_files" name="exam_files" accept=".ppt, .pptx, .pdf" multiple required>
-
-                    <label for="exam_ai_model">{{ t('select_ai_model') }}</label>
-                    <select id="exam_ai_model" name="ai_model">
-                        <option value="openai">OpenAI</option>
-                        <option value="claude">Claude</option>
-                    </select>
-
-                    <input type="hidden" name="action" value="exam_papers">
-                    <button type="button" onclick="showExamModal()">{{ t('generate_exam_questions') }}</button>
-                </form>
-
-                <div class="section-output final-output" style="display:none; margin-top:16px;">
-                    <div class="section-title">Output</div>
-                    <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
+                <div class="output-body">
+                    <div class="output-pre section-output-pre" id="syllabus-output-pre"></div>
                 </div>
             </div>
         </div>
 
-        <div id="grade-section" class="content-section">
-            <h2>{{ t('grading_heading') }}</h2>
-            <p>Upload a <strong>Key PDF</strong> and an <strong>Answer Sheet PDF</strong>. We’ll evaluate and show results below.</p>
-
-            <form id="gradeUploadForm" action="{{ url_for('grade_run') }}" method="POST" enctype="multipart/form-data">
-
-                <label>{{ t('key_pdf') }}</label>
-                <input type="file" name="key_pdf" accept="application/pdf" required>
-
-                <label>{{ t('answer_sheet_pdf') }}</label>
-                <input type="file" name="answer_pdf" accept="application/pdf" required>
-                <label for="grading_provider">Grading model</label>
-                    <select name="grading_provider" id="grading_provider">
-                        <option value="groq" selected>Groq</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="claude">Claude</option>
-                    </select>
-
-                <div class="button-group">
-                    <!-- Async OCR grading (Gemini OCR + Groq formatting + Groq grading) -->
-                    <button type="button" onclick="runAsyncGrade()"> {{ t('run_eval') }} </button>
-                </div>
-            </form>
-
-
-            <!-- Results will be injected here -->
-            <div id="grade-results" class="final-output" style="display:none; margin-top:16px;"></div>
-
-
-            <!-- Error and Success Messages -->
-            {% if error %}
-            <div class="error">{{ error }}</div>
-            {% endif %}
-
-            {% if success %}
-            <div class="success">{{ success }}</div>
-            {% endif %}
-        </div>
-        <div id="research-section" class="content-section">
-            <h2>Research Assistant</h2>
-            <p>Enter a topic or upload a file and generate a structured research brief.</p>
-
-            <form id="researchForm" action="/upload" method="POST" enctype="multipart/form-data">
-                <label><strong>Choose Input Type</strong></label>
-                <div style="margin: 10px 0 18px 0;">
-                    <label style="margin-right: 20px;">
-                        <input type="radio" name="input_mode" value="topic" checked onchange="toggleResearchInput()">
-                        Topic
-                    </label>
-                    <label>
-                        <input type="radio" name="input_mode" value="file" onchange="toggleResearchInput()">
-                        File
-                    </label>
-                </div>
-
-                <div id="topic_input">
-                    <label for="topic">Research Topic</label>
-                    <input type="text" id="topic" name="topic" placeholder="e.g. AI in education">
-                </div>
-
-                <div id="file_input" style="display:none;">
-                    <label for="research_file">Upload File</label>
-                    <input type="file" id="research_file" name="file" accept=".pdf,.docx,.txt,.ppt,.pptx">
-                </div>
-
-                <label for="research_ai_model">Select AI Model</label>
-                <select id="research_ai_model" name="ai_model">
-                    <option value="openai">OpenAI</option>
-                    <option value="claude">Claude</option>
-                </select>
-
-                <label for="audience">Audience</label>
-                <input type="text" id="audience" name="audience" placeholder="e.g. professor, research team, students">
-
-                <label for="depth">Depth</label>
-                <select id="depth" name="depth">
-                    <option value="Quick Overview">Quick Overview</option>
-                    <option value="Detailed" selected>Detailed</option>
-                    <option value="Deep Dive">Deep Dive</option>
-                </select>
-
-                <label for="scope">Scope</label>
-                <textarea id="scope" name="scope" rows="3" placeholder="e.g. focus on grading automation, recent methods, risks, and opportunities"></textarea>
-
-                <button type="submit" name="action" value="research">Generate Research Brief</button>
-            </form>
-            <div class="section-output final-output" style="display:none; margin-top:16px;">
-                <div class="section-title">Output</div>
-                <pre class="section-output-pre" style="white-space: pre-wrap; margin:0;"></pre>
-            </div>
-        </div>
-        <!-- Recommendation Modal -->
-        <div id="recModal" class="modal">
-            <div class="modal-content">
-                <span class="close-btn" onclick="closeRecModal()">×</span>
-                <h2>{{ t('enter_recommender_details') }}</h2>
-                <form id="recForm" method="POST" action="/upload" enctype="multipart/form-data">
-                    <input type="hidden" name="action" value="recommendation">
-                    <input type="hidden" name="ai_model" id="hidden_rec_ai_model">
-                    <input type="hidden" name="resume_file" id="hidden_resume_file">
-
-                    <label for="recommender_name">{{ t('recommender_name') }}</label>
-                    <input type="text" id="recommender_name" name="recommender_name" required>
-
-                    <label for="position">{{ t('position') }}</label>
-                    <input type="text" id="position" name="position" required>
-
-                    <label for="email">{{ t('email') }}</label>
-                    <input type="email" id="email" name="email" required>
-
-                    <button type="submit">{{ t('generate_letter') }}</button>
-                    <button type="button" onclick="closeRecModal()">{{ t('cancel') }}</button>
-                </form>
-            </div>
-        </div>
-
-    <!-- Questions Modal -->
-    <div id="questionModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeModal()">×</span>
-            <h2>{{ t('customize_questions') }}</h2>
-            <form id="modalForm" method="POST" action="/upload" enctype="multipart/form-data">
-                <input type="hidden" name="action" value="questions">
-                <input type="hidden" name="ai_model" id="hidden_ai_model">
-                <input type="hidden" name="chapter_file" id="hidden_chapter_file">
-
-                <label for="modal_total_questions">{{ t('total_questions') }}</label>
-                <input type="number" id="modal_total_questions" name="total_questions" min="1" required>
-
-                <label for="modal_mcq_count">MCQs:</label>
-                <input type="number" id="modal_mcq_count" name="mcq_count" min="0" required>
-
-                <label for="modal_tf_count">{{ t('true_false') }}</label>
-                <input type="number" id="modal_tf_count" name="tf_count" min="0" required>
-
-                <label for="modal_others_count">{{ t('other_types') }}</label>
-                <input type="number" id="modal_others_count" name="others_count" min="0" required>
-
-                <button type="submit">{{ t('generate_questions') }}</button>
-                <button type="button" onclick="closeModal()">{{ t('cancel') }}</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Exam Papers Modal -->
-    <div id="examModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <span class="close-btn" onclick="closeExamModal()">×</span>
-            <h2>{{ t('generate_exam_papers') }}</h2>
-            <form id="examModalForm">
-                <label for="num_students">{{ t('how_many_students') }}</label>
-                <input type="number" id="num_students" name="num_students" min="1" required>
-
-                <label for="questions_per_student">{{ t('how_many_questions_per_student') }}</label>
-                <input type="number" id="questions_per_student" name="questions_per_student" min="1" required>
-
-                <button type="button" onclick="submitExamForm()">{{ t('generate') }}</button>
-                <button type="button" onclick="closeExamModal()">{{ t('cancel') }}</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- Processing Screen -->
-    <div id="processingScreen">
-        <div id="processingContent">
-            <i id="processingIcon" class="fas fa-info-circle"></i>
-            <h2>{{ t('processing') }}</h2>
-            <div id="loadingSpinner"></div>
-            <p>{{ t('please_wait') }}</p>
-        </div>
-    </div>
-
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-
-    <script>
-        // Show section based on option button click
-        function showSection(section) {
-            const buttons = document.querySelectorAll('.option-btn');
-            buttons.forEach(btn => btn.classList.remove('active'));
-
-            const activeBtn = document.querySelector(`.option-btn[onclick*="showSection('${section}')"]`);
-            if (activeBtn) activeBtn.classList.add('active');
-
-            const sections = document.querySelectorAll('.content-section');
-            sections.forEach(s => s.classList.remove('active'));
-
-            const target = document.getElementById(`${section}-section`);
-            if (target) target.classList.add('active');
-
-            // NEW: update right panel visibility
-            updateRightPanel(section);
-        }
-
-
-        // Initial load: show Syllabus section by default
-        window.onload = function() {
-            showSection('syllabus');
-            hideProcessing();
-        };
-
-        function showModal() {
-            const fileInput = document.getElementById('chapter_file');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please select a file before customizing questions.");
-                return;
-            }
-            document.getElementById('hidden_ai_model').value = document.getElementById('chapter_ai_model').value;
-            document.getElementById('questionModal').style.display = 'flex';
-        }
-
-        function closeModal() {
-            document.getElementById('questionModal').style.display = 'none';
-        }
-
-        document.getElementById('modalForm').addEventListener('submit', async function (event) {
-            event.preventDefault();
-
-            const fileInput = document.getElementById('chapter_file');
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please select a file first.");
-                return;
-            }
-
-            showProcessing();
-            try {
-                // Build FormData from the main chapter form so the file is included
-                const chapterForm = document.getElementById('chapterForm');
-                const fd = new FormData(chapterForm);
-
-                fd.set("ai_model", document.getElementById('chapter_ai_model').value);
-                fd.set("action", "questions");
-                fd.set("total_questions", document.getElementById('modal_total_questions').value);
-                fd.set("mcq_count", document.getElementById('modal_mcq_count').value);
-                fd.set("tf_count", document.getElementById('modal_tf_count').value);
-                fd.set("others_count", document.getElementById('modal_others_count').value);
-
-                const res = await fetch("/upload", {
-                    method: "POST",
-                    body: fd,
-                    headers: { "X-Requested-With": "XMLHttpRequest" }
-                });
-
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    throw new Error(data.error || `Request failed (status ${res.status}).`);
-                }
-
-                renderAiOutput(data.action || "questions", data.result ?? data);
-                closeModal();
-            } catch (e) {
-                renderAiOutput("questions", { error: e.message });
-                alert(e.message);
-            } finally {
-                hideProcessing();
-            }
-        });
-        document.getElementById("syllabusForm").addEventListener("submit", async function (event) {
-            event.preventDefault();
-
-            const fileInput = document.getElementById("file");
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please upload a syllabus file first.");
-                return;
-            }
-
-            showProcessing();
-            try {
-                const fd = new FormData(this);
-
-                // ensure action=structured is included
-                if (event.submitter && event.submitter.name) {
-                fd.set(event.submitter.name, event.submitter.value);
-                }
-
-                const res = await fetch("/upload", {
-                method: "POST",
-                body: fd,
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-                });
-
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) throw new Error(data.error || `Request failed (status ${res.status}).`);
-
-                renderAiOutput(data.action || "structured", data.result ?? data);
-            } catch (e) {
-                renderAiOutput("structured", { error: e.message });
-                alert(e.message);
-            } finally {
-                hideProcessing();
-            }
-            });
-
-
-        function showRecModal() {
-            const fileInput = document.getElementById('resume_file');
-            const aiModelSelect = document.getElementById('rec_ai_model');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please select a resume file before generating a recommendation letter.");
-                return;
-            }
-
-            if (!aiModelSelect.value) {
-                alert("Please select an AI model (OpenAI or Claude) before proceeding.");
-                return;
-            }
-
-            document.getElementById('hidden_rec_ai_model').value = aiModelSelect.value;
-            document.getElementById('recModal').style.display = 'flex';
-        }
-
-        function closeRecModal() {
-            document.getElementById('recModal').style.display = 'none';
-        }
-
-        document.getElementById("recForm").addEventListener("submit", async function (event) {
-            event.preventDefault();
-
-            const fileInput = document.getElementById("resume_file");
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please upload a resume file first.");
-                return;
-            }
-
-            showProcessing();
-            try {
-                const fd = new FormData(this);
-                // Attach the actual file from the main form
-                fd.set("resume_file", fileInput.files[0]);
-
-                const res = await fetch("/upload", {
-                    method: "POST",
-                    body: fd,
-                    headers: { "X-Requested-With": "XMLHttpRequest" }
-                });
-
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    throw new Error(data.error || `Request failed (status ${res.status}).`);
-                }
-
-                renderAiOutput(data.action || "recommendation", data.result ?? data);
-                closeRecModal();
-            } catch (e) {
-                renderAiOutput("recommendation", { error: e.message });
-                alert(e.message);
-            } finally {
-                hideProcessing();
-            }
-        });
-
-
-        function showExamModal() {
-            const fileInput = document.getElementById('exam_files');
-            const aiModelSelect = document.getElementById('exam_ai_model');
-
-            if (!fileInput.files || fileInput.files.length === 0) {
-                alert("Please select at least one PPTX/PPT or PDF file before generating exam papers.");
-                return;
-            }
-
-            if (!aiModelSelect.value) {
-                alert("Please select an AI model (OpenAI or Claude) before proceeding.");
-                return;
-            }
-
-            document.getElementById('examModal').style.display = 'flex';
-        }
-
-        function closeExamModal() {
-            document.getElementById('examModal').style.display = 'none';
-        }
-
-       async function submitExamForm() {
-        const numStudents = document.getElementById('num_students').value;
-        const questionsPerStudent = document.getElementById('questions_per_student').value;
-
-        if (!numStudents || !questionsPerStudent || numStudents < 1 || questionsPerStudent < 1) {
-            alert('Please enter valid numbers for students and questions.');
-            return;
-        }
-
-        const examForm = document.getElementById('examUploadForm'); // MUST be the form
-
-        // attach/update hidden inputs
-        setHidden(examForm, "num_students", numStudents);
-        setHidden(examForm, "questions_per_student", questionsPerStudent);
-
-        showProcessing();
-        try {
-            const data = await postFormAjax(examForm);
-            renderAiOutput(data.action || "exam_papers", data.result ?? data);
-            closeExamModal();
-        } catch (e) {
-            renderAiOutput("exam_papers", { error: e.message });
-            alert(e.message);
-        } finally {
-            hideProcessing();
-        }
-    }
-
-
-        // Chapter concepts submit (normal button)
-        document.getElementById("chapterForm").addEventListener("submit", async function(event) {
-            event.preventDefault();
-            showProcessing();
-            try {
-                const data = await postFormAjax(this);
-                renderAiOutput(data.action || "chapter", data.result ?? data);
-            } catch (e) {
-                renderAiOutput("chapter", { error: e.message });
-                alert(e.message);
-            } finally {
-                hideProcessing();
-            }
-        });
-        function showProcessing() {
-            document.getElementById('processingScreen').style.display = 'flex';
-        }
-
-        function hideProcessing() {
-            document.getElementById('processingScreen').style.display = 'none';
-        }
-
-        function escapeHtml(str) {
-            return String(str)
-                .replaceAll("&", "&amp;")
-                .replaceAll("<", "&lt;")
-                .replaceAll(">", "&gt;")
-                .replaceAll('"', "&quot;")
-                .replaceAll("'", "&#039;");
-            }
-
-            // Minimal markdown-ish formatter:
-            // - converts **bold** to <strong>
-            // - converts "- item" lines to <ul><li>...</li></ul>
-            // - keeps paragraphs readable
-            function formatMarkdownLite(text) {
-            if (!text) return "";
-
-            // Normalize line breaks
-            text = text.replace(/\r/g, "");
-
-            // Split into lines
-            const lines = text.split("\n");
-
-            let html = "";
-
-            lines.forEach(line => {
-                line = line.trim();
-
-                if (!line) return;
-
-                // Bullet point with bold title
-                const match = line.match(/^-?\s*\*\*(.*?)\*\*:\s*(.*)/);
-
-                if (match) {
-                    const title = match[1];
-                    const desc = match[2];
-
-                    html += `
-                        <div style="margin-bottom:10px;">
-                            <div style="font-weight:600;">${escapeHtml(title)}</div>
-                            <div style="margin-left:10px;">• ${escapeHtml(desc)}</div>
+        <!-- ────────────────────────────────────────────────────────
+             CHAPTER SECTION
+        ──────────────────────────────────────────────────────────── -->
+        <div id="chapter-section" class="section-panel">
+            <p class="section-heading">{{ t('chapter_insights_questions') }}</p>
+            <p class="section-sub">{{ t('chapter_upload_desc') }}</p>
+
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-book-open"></i></div>
+                <form id="chapterForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" id="chapter_action" value="">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('choose_pdf_ppt') }}</label>
+                            <input type="file" id="chapter_file" name="chapter_file"
+                                   accept=".pdf,.ppt,.pptx" required
+                                   onchange="evaluateChapterFileSoftWarning()">
+                            <div class="soft-warning" id="chapterSoftWarning"></div>
                         </div>
-                    `;
-                } else {
-                    // Normal bullet
-                    if (line.startsWith("- ")) {
-                        html += `<div>• ${escapeHtml(line.slice(2))}</div>`;
-                    } else {
-                        html += `<p>${escapeHtml(line)}</p>`;
-                    }
-                }
-            });
+                        <div class="field">
+                            <label>{{ t('select_ai_model') }}</label>
+                            <select id="chapter_ai_model" name="ai_model">
+                                <option value="openai">OpenAI GPT-4o mini</option>
+                                <option value="claude">Claude Sonnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-secondary" onclick="showModal()">
+                            <i class="fas fa-list-ol"></i> {{ t('customize_questions') }}
+                        </button>
+                        <button type="button" class="btn btn-secondary" onclick="submitChapterConcepts()">
+                            <i class="fas fa-lightbulb"></i> {{ t('extract_core_concepts') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-            return html;
-        }
-            // Recommendation letter formatter:
-            // Splits into paragraphs and adds spacing like a real letter
-            function formatLetter(text) {
-            const safe = escapeHtml(String(text));
+            <div class="output-panel" id="chapter-output">
+                <div class="output-header">
+                    <div class="output-title"><i class="fas fa-circle"></i> {{ t('output_label') | default('OUTPUT') }}</div>
+                    <div class="output-actions">
+                        <button class="btn-ghost" onclick="copyOutput('chapter-output-pre')" style="padding:4px 10px; font-size:0.75rem;">
+                            <i class="fas fa-copy"></i> {{ t('copy') | default('Copy') }}
+                        </button>
+                    </div>
+                </div>
+                <div class="output-body">
+                    <div class="output-pre section-output-pre" id="chapter-output-pre"></div>
+                </div>
+            </div>
+        </div>
 
-            // Normalize: split by blank lines
-            const paras = safe.split(/\n\s*\n/g).map(p => p.trim()).filter(Boolean);
+        <!-- ────────────────────────────────────────────────────────
+             RESUME / RECOMMENDATION SECTION
+        ──────────────────────────────────────────────────────────── -->
+        <div id="resume-section" class="section-panel">
+            <p class="section-heading">{{ t('recommendation_letter_assistance') }}</p>
+            <p class="section-sub">{{ t('resume_upload_desc') }}</p>
 
-            // If model returns one giant paragraph, at least split by sentence clusters
-            const finalParas = paras.length === 1
-                ? safe.split(/(?<=[.!?])\s+(?=[A-Z])/g).reduce((acc, sentence) => {
-                    // group ~2-3 sentences per paragraph
-                    if (!acc.length || acc[acc.length - 1].split(".").length > 3) acc.push(sentence);
-                    else acc[acc.length - 1] += " " + sentence;
-                    return acc;
-                }, [])
-                : paras;
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-envelope-open-text"></i></div>
+                <form id="recUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('choose_pdf_docx') }}</label>
+                            <input type="file" id="resume_file" name="resume_file" accept=".pdf,.docx" required>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('select_ai_model') }}</label>
+                            <select id="rec_ai_model" name="ai_model">
+                                <option value="openai">OpenAI GPT-4o mini</option>
+                                <option value="claude">Claude Sonnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" onclick="showRecModal()">
+                            <i class="fas fa-pen-nib"></i> {{ t('generate_recommendation_letter') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-            return `<div class="letter-box">
-                ${finalParas.map(p => `<p class="letter-p">${p}</p>`).join("\n")}
-            </div>`;
-            }
+            <div class="output-panel" id="resume-output">
+                <div class="output-header">
+                    <div class="output-title"><i class="fas fa-circle"></i> {{ t('output_label') | default('OUTPUT') }}</div>
+                    <div class="output-actions">
+                        <button class="btn-ghost" onclick="copyOutput('resume-output-pre')" style="padding:4px 10px; font-size:0.75rem;">
+                            <i class="fas fa-copy"></i> {{ t('copy') | default('Copy') }}
+                        </button>
+                    </div>
+                </div>
+                <div class="output-body">
+                    <div class="output-pre section-output-pre" id="resume-output-pre"></div>
+                </div>
+            </div>
+        </div>
 
+        <!-- ────────────────────────────────────────────────────────
+             EXAM SECTION
+        ──────────────────────────────────────────────────────────── -->
+        <div id="exam-section" class="section-panel">
+            <p class="section-heading">{{ t('exam_questions_generation') }}</p>
+            <p class="section-sub">{{ t('exam_upload_desc') }}</p>
 
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-clipboard-list"></i></div>
+                <form id="examUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="action" value="exam_papers">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('choose_pptx_pdf') | default('Choose PPTX/PPT or PDF files') }}</label>
+                            <input type="file" id="exam_files" name="exam_files"
+                                   accept=".ppt,.pptx,.pdf" multiple required>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('select_ai_model') }}</label>
+                            <select id="exam_ai_model" name="ai_model">
+                                <option value="openai">OpenAI GPT-4o mini</option>
+                                <option value="claude">Claude Sonnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" onclick="showExamModal()">
+                            <i class="fas fa-paper-plane"></i> {{ t('generate_exam_questions') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-        // -----------------------------
-        // AJAX helpers for /upload tools
-        // -----------------------------
-    console.log("UPLOAD RESPONSE:", data);
-    console.log("UPLOAD RESPONSE RESULT:", data.result);
+            <div class="output-panel" id="exam-output">
+                <div class="output-header">
+                    <div class="output-title"><i class="fas fa-circle"></i> {{ t('output_label') | default('OUTPUT') }}</div>
+                    <div class="output-actions">
+                        <button class="btn-ghost" onclick="copyOutput('exam-output-pre')" style="padding:4px 10px; font-size:0.75rem;">
+                            <i class="fas fa-copy"></i> {{ t('copy') | default('Copy') }}
+                        </button>
+                    </div>
+                </div>
+                <div class="output-body">
+                    <div class="output-pre section-output-pre" id="exam-output-pre"></div>
+                </div>
+            </div>
+        </div>
 
-    function renderAiOutput(action, response) {
-    console.log("renderAiOutput received:", response);
-    const active = document.querySelector(".content-section.active");
-    if (!active) return;
+        <!-- ────────────────────────────────────────────────────────
+             GRADING SECTION
+        ──────────────────────────────────────────────────────────── -->
+        <div id="grade-section" class="section-panel">
+            <p class="section-heading">{{ t('grading_heading') }}</p>
+            <p class="section-sub">{{ t('grading_desc') }}</p>
 
-    const out = active.querySelector(".section-output");
-    const pre = active.querySelector(".section-output-pre");
-    if (!out || !pre) return;
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-check-double"></i></div>
+                <form id="gradeUploadForm" action="{{ url_for('grade_run') }}" method="POST" enctype="multipart/form-data">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('key_pdf') }}</label>
+                            <input type="file" name="key_pdf" accept="application/pdf" required>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('answer_sheet_pdf') }}</label>
+                            <input type="file" name="answer_pdf" accept="application/pdf" required>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>{{ t('grading_model') | default('Grading Model') }}</label>
+                        <select name="grading_provider" id="grading_provider">
+                            <option value="groq" selected>Groq (Fast)</option>
+                            <option value="openai">OpenAI GPT-4o mini</option>
+                            <option value="claude">Claude Sonnet</option>
+                        </select>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" onclick="runAsyncGrade()">
+                            <i class="fas fa-play"></i> {{ t('run_eval') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-    out.style.display = "block";
-    pre.innerHTML = "";
+            <div class="grade-results-area" id="grade-results"></div>
+        </div>
 
-    let payload = response;
+        <!-- ────────────────────────────────────────────────────────
+             RESEARCH SECTION
+        ──────────────────────────────────────────────────────────── -->
+        <div id="research-section" class="section-panel">
+            <p class="section-heading">{{ t('research_assistant') | default('Research Assistant') }}</p>
+            <p class="section-sub">{{ t('research_desc') | default('Enter a topic or upload a file and generate a structured research brief.') }}</p>
 
-    // Try to parse JSON strings into real objects
-    if (typeof payload === "string") {
-        const trimmed = payload.trim();
-        if (
-            (trimmed.startsWith("{") && trimmed.endsWith("}")) ||
-            (trimmed.startsWith("[") && trimmed.endsWith("]"))
-        ) {
-            try {
-                payload = JSON.parse(trimmed);
-            } catch (e) {
-                console.warn("Payload looked like JSON but could not be parsed:", e);
-            }
-        }
-    }
-
-    if (payload && typeof payload === "object" && payload.error) {
-        pre.innerHTML += `<div class="ui-error">${escapeHtml(payload.error)}</div>`;
-        return;
-    }
-
-    if (typeof payload === "string") {
-        if (action === "recommendation") {
-            pre.innerHTML += formatLetter(payload);
-            return;
-        }
-
-        if (action === "concepts" || action === "chapter" || action === "core_concepts" || action === "research") {
-            pre.innerHTML += formatMarkdownLite(payload);
-            return;
-        }
-
-        pre.innerHTML += `<div class="pretty-text">${formatMarkdownLite(payload)}</div>`;
-        return;
-    }
-
-    if (!payload || typeof payload !== "object") {
-        pre.innerHTML += `<p>${escapeHtml(String(payload ?? ""))}</p>`;
-        return;
-    }
-
-    for (const [key, value] of Object.entries(payload)) {
-        const title = key
-            .replaceAll("_", " ")
-            .replace(/\b\w/g, c => c.toUpperCase());
-
-        const section = document.createElement("div");
-        section.className = "ui-block";
-        section.innerHTML = `<h4>${title}</h4>`;
-
-        if (Array.isArray(value)) {
-            if (key === "exams") {
-                value.forEach(exam => {
-                    if (!exam || typeof exam !== "object" || !Array.isArray(exam.questions)) return;
-
-                    const studentBlock = document.createElement("div");
-                    studentBlock.className = "exam-student-block";
-
-                    const hdr = document.createElement("h5");
-                    hdr.className = "exam-student-title";
-                    hdr.textContent = `Student ${exam.student ?? ""}`.trim();
-                    studentBlock.appendChild(hdr);
-
-                    const studentUl = document.createElement("ul");
-                    studentUl.className = "exam-question-list";
-
-                    exam.questions.forEach((q, idx) => {
-                        const li = document.createElement("li");
-                        li.className = "exam-question-item";
-
-                        li.innerHTML = `
-                            <div class="q-title"><strong>Q${idx + 1}.</strong> ${escapeHtml(q.question ?? "Question")}</div>
-                            ${q.options ? `<div class="q-options"><strong>Options:</strong> ${q.options.map(o => escapeHtml(o)).join(", ")}</div>` : ""}
-                            ${(() => {
-                                const ans = (q.answer ?? "").toString();
-                                const preview = ans.length > 160 ? ans.slice(0, 160) + "…" : ans;
-
-                                return `
-                                    <div class="q-answer-preview"><strong>Answer:</strong> ${escapeHtml(preview || "(no answer returned)")}</div>
-                                    <details class="q-answer">
-                                        <summary>Show full answer</summary>
-                                        <div class="q-answer-body">${escapeHtml(ans || "(no answer returned)")}</div>
-                                    </details>
-                                `;
-                            })()}
-                            <div class="q-meta">
-                                <span><strong>Difficulty:</strong> ${escapeHtml(q.difficulty ?? "")}</span>
-                                <span><strong>Reference:</strong> ${escapeHtml(q.reference ?? "")}</span>
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-search"></i></div>
+                <form id="researchForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <div class="field">
+                        <label>{{ t('input_type') | default('Input Type') }}</label>
+                        <div class="radio-group">
+                            <div class="radio-option">
+                                <input type="radio" name="input_mode" id="mode_topic" value="topic" checked onchange="toggleResearchInput()">
+                                <label for="mode_topic"><i class="fas fa-keyboard"></i> {{ t('topic') | default('Topic') }}</label>
                             </div>
-                        `;
+                            <div class="radio-option">
+                                <input type="radio" name="input_mode" id="mode_file" value="file" onchange="toggleResearchInput()">
+                                <label for="mode_file"><i class="fas fa-file-upload"></i> {{ t('file') | default('File') }}</label>
+                            </div>
+                        </div>
+                    </div>
 
-                        studentUl.appendChild(li);
-                    });
+                    <div id="topic_input" class="field">
+                        <label>{{ t('research_topic') | default('Research Topic') }}</label>
+                        <input type="text" id="topic" name="topic" placeholder="e.g. AI in education">
+                    </div>
 
-                    studentBlock.appendChild(studentUl);
-                    section.appendChild(studentBlock);
-                });
-            } else {
-                const ul = document.createElement("ul");
+                    <div id="file_input" class="field hidden">
+                        <label>{{ t('upload_file') | default('Upload File') }}</label>
+                        <input type="file" id="research_file" name="file" accept=".pdf,.docx,.txt,.ppt,.pptx">
+                    </div>
 
-                value.forEach(item => {
-                    const li = document.createElement("li");
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('select_ai_model') }}</label>
+                            <select id="research_ai_model" name="ai_model">
+                                <option value="openai">OpenAI GPT-4o mini</option>
+                                <option value="claude">Claude Sonnet</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('audience') | default('Audience') }}</label>
+                            <input type="text" id="audience" name="audience"
+                                   placeholder="{{ t('audience_placeholder') | default('e.g. professor, research team') }}">
+                        </div>
+                    </div>
 
-                    // 🔥 Concepts case (title + description)
-                    if (item && typeof item === "object" && item.title && item.description) {
-                        li.innerHTML = `
-                            <strong>${escapeHtml(item.title)}</strong><br>
-                            ${escapeHtml(item.description)}
-                        `;
-                    }
+                    <div class="form-row">
+                        <div class="field">
+                            <label>{{ t('depth') | default('Depth') }}</label>
+                            <select id="depth" name="depth">
+                                <option value="Quick Overview">{{ t('quick_overview') | default('Quick Overview') }}</option>
+                                <option value="Detailed" selected>{{ t('detailed') | default('Detailed') }}</option>
+                                <option value="Deep Dive">{{ t('deep_dive') | default('Deep Dive') }}</option>
+                            </select>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('scope') | default('Scope') }}</label>
+                            <input type="text" id="scope" name="scope"
+                                   placeholder="{{ t('scope_placeholder') | default('e.g. focus on recent methods, risks') }}">
+                        </div>
+                    </div>
 
-                    // Existing question-style objects
-                    else if (item && typeof item === "object") {
-                        li.innerHTML = `
-                            <strong>${escapeHtml(item.question ?? "Item")}</strong><br>
-                            ${item.options ? "<em>Options:</em> " + item.options.map(o => escapeHtml(o)).join(", ") + "<br>" : ""}
-                            ${item.answer ? "<em>Answer:</em> " + escapeHtml(item.answer) + "<br>" : ""}
-                            ${item.difficulty ? "<em>Difficulty:</em> " + escapeHtml(item.difficulty) + "<br>" : ""}
-                            ${item.reference ? "<em>Reference:</em> " + escapeHtml(item.reference) : ""}
-                        `;
-                    }
+                    <div class="btn-group">
+                        <button type="submit" name="action" value="research" class="btn btn-primary">
+                            <i class="fas fa-search"></i> {{ t('generate_research_brief') | default('Generate Research Brief') }}
+                        </button>
+                    </div>
+                </form>
+            </div>
 
-                    else {
-                        li.textContent = String(item); 
-                    }
+            <div class="output-panel" id="research-output">
+                <div class="output-header">
+                    <div class="output-title"><i class="fas fa-circle"></i> {{ t('output_label') | default('OUTPUT') }}</div>
+                    <div class="output-actions">
+                        <button class="btn-ghost" onclick="copyOutput('research-output-pre')" style="padding:4px 10px; font-size:0.75rem;">
+                            <i class="fas fa-copy"></i> {{ t('copy') | default('Copy') }}
+                        </button>
+                    </div>
+                </div>
+                <div class="output-body">
+                    <div class="output-pre section-output-pre" id="research-output-pre"></div>
+                </div>
+            </div>
+        </div>
 
-                    ul.appendChild(li);
-                });
-                section.appendChild(ul);
-            }
-        } else if (value && typeof value === "object") {
-            section.innerHTML += `<pre style="white-space: pre-wrap;">${escapeHtml(JSON.stringify(value, null, 2))}</pre>`;
-        } else {
-            section.innerHTML += `<p>${escapeHtml(String(value ?? ""))}</p>`;
-        }
+        <!-- ────────────────────────────────────────────────────────
+             CITATION SECTION (New)
+        ──────────────────────────────────────────────────────────── -->
+        <div id="citation-section" class="section-panel">
+            <p class="section-heading">{{ t('citation_tool') | default('Citation Generator') }}</p>
+            <p class="section-sub">{{ t('citation_desc') | default('Generate properly formatted academic citations from source details. Supports APA, MLA, Chicago, and IEEE formats.') }}</p>
 
-        pre.appendChild(section);
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-quote-left"></i></div>
+                <div class="field">
+                    <label>{{ t('citation_style') | default('Citation Style') }}</label>
+                    <select id="citation_style">
+                        <option value="APA">APA (7th Edition)</option>
+                        <option value="MLA">MLA (9th Edition)</option>
+                        <option value="Chicago">Chicago (Author-Date)</option>
+                        <option value="IEEE">IEEE</option>
+                        <option value="Harvard">Harvard</option>
+                    </select>
+                </div>
+
+                <div class="field">
+                    <label>{{ t('source_type') | default('Source Type') }}</label>
+                    <select id="source_type" onchange="updateCitationFields()">
+                        <option value="journal">Journal Article</option>
+                        <option value="book">Book</option>
+                        <option value="website">Website</option>
+                        <option value="conference">Conference Paper</option>
+                    </select>
+                </div>
+
+                <div id="citation_fields">
+                    <!-- Journal (default) -->
+                    <div id="fields_journal">
+                        <div class="form-row">
+                            <div class="field">
+                                <label>{{ t('author') | default('Author(s)') }}</label>
+                                <input type="text" id="cit_author" placeholder="e.g. Smith, J. A., & Doe, B.">
+                            </div>
+                            <div class="field">
+                                <label>{{ t('year') | default('Year') }}</label>
+                                <input type="text" id="cit_year" placeholder="e.g. 2024">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('article_title') | default('Article Title') }}</label>
+                            <input type="text" id="cit_title" placeholder="e.g. Machine learning in education">
+                        </div>
+                        <div class="form-row">
+                            <div class="field">
+                                <label>{{ t('journal_name') | default('Journal Name') }}</label>
+                                <input type="text" id="cit_journal" placeholder="e.g. Journal of Educational Technology">
+                            </div>
+                            <div class="field">
+                                <label>{{ t('vol_issue_pages') | default('Volume(Issue), Pages') }}</label>
+                                <input type="text" id="cit_vol" placeholder="e.g. 12(3), 45–67">
+                            </div>
+                        </div>
+                        <div class="field">
+                            <label>DOI / URL</label>
+                            <input type="text" id="cit_doi" placeholder="e.g. https://doi.org/10.xxxx/xxxxx">
+                        </div>
+                    </div>
+                </div>
+
+                <div class="btn-group">
+                    <button class="btn btn-primary" onclick="generateCitation()">
+                        <i class="fas fa-magic"></i> {{ t('generate_citation') | default('Generate Citation') }}
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearCitation()">
+                        <i class="fas fa-times"></i> {{ t('clear') | default('Clear') }}
+                    </button>
+                </div>
+            </div>
+
+            <!-- Output -->
+            <div class="card" id="citation-result-card" style="display:none;">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:14px;">
+                    <div style="font-size:0.82rem; font-weight:600; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:0.04em;">
+                        <i class="fas fa-circle" style="color:var(--green);"></i> {{ t('generated_citation') | default('GENERATED CITATION') }}
+                    </div>
+                    <button class="btn-ghost" onclick="copyCitation()" style="padding:4px 10px; font-size:0.75rem;">
+                        <i class="fas fa-copy"></i> {{ t('copy') | default('Copy') }}
+                    </button>
+                </div>
+                <div class="citation-box" id="citation-output"></div>
+
+                <div class="callout info" style="margin-top:16px; margin-bottom:0;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>{{ t('citation_verify_note') | default('Always verify your citation against the original source. Citation formats may vary by institution guidelines.') }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ────────────────────────────────────────────────────────
+             PRIVACY POLICY SECTION (New)
+        ──────────────────────────────────────────────────────────── -->
+        <div id="privacy-section" class="section-panel">
+            <p class="section-heading">{{ t('privacy_policy') | default('Privacy Policy') }}</p>
+            <p class="section-sub">{{ t('privacy_intro') | default('Transparency about how your data is handled and what privacy protections are in place.') }}</p>
+
+            <div class="callout info" style="margin-bottom:24px;">
+                <i class="fas fa-info-circle"></i>
+                <span>{{ t('privacy_last_updated') | default('Last updated: 2025. This platform is operated for academic research and educational purposes under faculty supervision.') }}</span>
+            </div>
+
+            <div class="privacy-grid">
+                <div class="privacy-item">
+                    <div class="privacy-item-icon">📁</div>
+                    <h4>{{ t('data_storage_title') | default('Data Storage') }}</h4>
+                    <p>{{ t('data_storage_desc') | default('Uploaded files are processed in memory and temporarily stored on the server during the active session only. Files are not retained after processing.') }}</p>
+                    <div class="mt-8"><span class="privacy-tag amber">{{ t('tag_temporary') | default('TEMPORARY') }}</span></div>
+                </div>
+                <div class="privacy-item">
+                    <div class="privacy-item-icon">🔐</div>
+                    <h4>{{ t('authentication_title') | default('Authentication') }}</h4>
+                    <p>{{ t('authentication_desc') | default('Passwords are hashed using bcrypt with salt rounds. Session tokens expire after 1 hour of inactivity. HTTPS is enforced in production deployments.') }}</p>
+                    <div class="mt-8"><span class="privacy-tag green">{{ t('tag_bcrypt') | default('BCRYPT HASHED') }}</span></div>
+                </div>
+                <div class="privacy-item">
+                    <div class="privacy-item-icon">🤖</div>
+                    <h4>{{ t('ai_api_usage_title') | default('AI API Usage') }}</h4>
+                    <p>{{ t('ai_api_usage_desc') | default('Content is sent to third-party AI providers (OpenAI, Anthropic, Google). By using this platform you agree to those providers\' data policies. No content is stored by this application post-processing.') }}</p>
+                    <div class="mt-8"><span class="privacy-tag amber">{{ t('tag_third_party') | default('THIRD-PARTY APIS') }}</span></div>
+                </div>
+                <div class="privacy-item">
+                    <div class="privacy-item-icon">🗄️</div>
+                    <h4>{{ t('database_title') | default('Database') }}</h4>
+                    <p>{{ t('database_desc') | default('User accounts (username, email, hashed password) are stored in PostgreSQL (production) or SQLite (local). No academic content or uploaded documents are persisted.') }}</p>
+                    <div class="mt-8"><span class="privacy-tag blue">{{ t('tag_encrypted') | default('HASHED ONLY') }}</span></div>
+                </div>
+                <div class="privacy-item">
+                    <div class="privacy-item-icon">⚡</div>
+                    <h4>{{ t('caching_title') | default('Response Caching') }}</h4>
+                    <p>{{ t('caching_desc') | default('AI responses are cached per-session using prompt hashing to reduce API token usage. Caches are cleared when the session expires and are never shared between users.') }}</p>
+                    <div class="mt-8"><span class="privacy-tag green">{{ t('tag_session_scoped') | default('SESSION-SCOPED') }}</span></div>
+                </div>
+                <div class="privacy-item">
+                    <div class="privacy-item-icon">👤</div>
+                    <h4>{{ t('your_rights_title') | default('Your Rights') }}</h4>
+                    <p>{{ t('your_rights_desc') | default('You can delete your account at any time. Contact the platform administrator to request account deletion or data review. This platform is FERPA-aware and does not share student data.') }}</p>
+                    <div class="mt-8"><span class="privacy-tag green">{{ t('tag_ferpa') | default('FERPA-AWARE') }}</span></div>
+                </div>
+            </div>
+
+            <div class="callout warning">
+                <i class="fas fa-exclamation-triangle"></i>
+                <div>
+                    <strong>{{ t('privacy_limitation_title') | default('Known Limitations') }}</strong><br>
+                    {{ t('privacy_limitation_desc') | default('This platform currently relies on external AI APIs, which means document content is transmitted to third-party servers. For highly sensitive academic documents, please consult your institution\'s data governance policies before use.') }}
+                </div>
+            </div>
+        </div>
+
+        <!-- ────────────────────────────────────────────────────────
+             ARCHITECTURE SECTION (New)
+        ──────────────────────────────────────────────────────────── -->
+        <div id="architecture-section" class="section-panel">
+            <p class="section-heading">{{ t('architecture') | default('Backend Architecture') }}</p>
+            <p class="section-sub">{{ t('architecture_desc') | default('Transparency about the technical stack, scalability design, and system components.') }}</p>
+
+            <div class="card">
+                <div class="card-icon"><i class="fas fa-sitemap"></i></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div>
+                        <p style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:0.06em; margin-bottom:12px;">BACKEND</p>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> Flask + Gunicorn (WSGI)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> SQLAlchemy ORM
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> Flask-Bcrypt (Auth)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> Async grading (threading)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> In-memory + DB caching
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:0.06em; margin-bottom:12px;">AI PROVIDERS</p>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--accent);"></i> OpenAI GPT-4o mini
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--accent);"></i> Anthropic Claude Sonnet
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--accent);"></i> Google Gemini (OCR)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--accent);"></i> Groq (Fast grading)
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:0.06em; margin-bottom:12px;">DATABASE</p>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--amber);"></i> PostgreSQL (Production)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--amber);"></i> SQLite (Development)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--amber);"></i> Document store (core.docstore)
+                            </div>
+                        </div>
+                    </div>
+                    <div>
+                        <p style="font-size:0.75rem; color:var(--text-muted); font-family:var(--font-mono); letter-spacing:0.06em; margin-bottom:12px;">DEPLOYMENT</p>
+                        <div style="display:flex; flex-direction:column; gap:10px;">
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> Railway / Cloud deploy
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> Gunicorn (production WSGI)
+                            </div>
+                            <div style="display:flex; align-items:center; gap:10px; font-size:0.87rem; color:var(--text-secondary);">
+                                <i class="fas fa-circle" style="font-size:6px; color:var(--green);"></i> HTTPS + secure session cookies
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="callout info">
+                <i class="fas fa-info-circle"></i>
+                <div>
+                    <strong>{{ t('scalability_note_title') | default('Scalability Note') }}</strong><br>
+                    {{ t('scalability_note_desc') | default('The application is designed for horizontal scaling via Gunicorn workers. The caching layer reduces redundant API calls. Database connections use SQLAlchemy connection pooling. For enterprise-scale usage, a Redis cache and worker queue (e.g. Celery) would be recommended additions.') }}
+                </div>
+            </div>
+        </div>
+
+    </main>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     MODALS
+════════════════════════════════════════════════════════════════════ -->
+
+<!-- Recommendation Modal -->
+<div id="recModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-close" onclick="closeRecModal()"><i class="fas fa-times"></i></div>
+        <h2 class="modal-title">{{ t('enter_recommender_details') }}</h2>
+        <p class="modal-sub">{{ t('recommendation_modal_sub') | default('These details will appear in the generated letter header.') }}</p>
+        <form id="recForm" method="POST" action="/upload" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="recommendation">
+            <input type="hidden" name="ai_model" id="hidden_rec_ai_model">
+            <input type="hidden" name="resume_file" id="hidden_resume_file">
+            <div class="field">
+                <label>{{ t('recommender_name') }}</label>
+                <input type="text" id="recommender_name" name="recommender_name" required
+                       placeholder="{{ t('recommender_name_placeholder') | default('Prof. Jane Smith') }}">
+            </div>
+            <div class="field">
+                <label>{{ t('position') }}</label>
+                <input type="text" id="position" name="position" required
+                       placeholder="{{ t('position_placeholder') | default('Associate Professor, Dept. of CS') }}">
+            </div>
+            <div class="field">
+                <label>{{ t('email') }}</label>
+                <input type="email" id="email" name="email" required
+                       placeholder="professor@university.edu">
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-pen-nib"></i> {{ t('generate_letter') }}</button>
+                <button type="button" class="btn btn-secondary" onclick="closeRecModal()">{{ t('cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Questions Modal -->
+<div id="questionModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-close" onclick="closeModal()"><i class="fas fa-times"></i></div>
+        <h2 class="modal-title">{{ t('customize_questions') }}</h2>
+        <p class="modal-sub">{{ t('customize_questions_sub') | default('Configure the number and types of questions to generate.') }}</p>
+        <form id="modalForm" method="POST" action="/upload" enctype="multipart/form-data">
+            <input type="hidden" name="action" value="questions">
+            <input type="hidden" name="ai_model" id="hidden_ai_model">
+            <input type="hidden" name="chapter_file" id="hidden_chapter_file">
+            <div class="form-row">
+                <div class="field">
+                    <label>{{ t('total_questions') }}</label>
+                    <input type="number" id="modal_total_questions" name="total_questions" min="1" value="20" required>
+                </div>
+                <div class="field">
+                    <label>MCQs</label>
+                    <input type="number" id="modal_mcq_count" name="mcq_count" min="0" value="5" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="field">
+                    <label>{{ t('true_false') }}</label>
+                    <input type="number" id="modal_tf_count" name="tf_count" min="0" value="5" required>
+                </div>
+                <div class="field">
+                    <label>{{ t('other_types') }}</label>
+                    <input type="number" id="modal_others_count" name="others_count" min="0" value="10" required>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-magic"></i> {{ t('generate_questions') }}</button>
+                <button type="button" class="btn btn-secondary" onclick="closeModal()">{{ t('cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Exam Modal -->
+<div id="examModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-close" onclick="closeExamModal()"><i class="fas fa-times"></i></div>
+        <h2 class="modal-title">{{ t('generate_exam_papers') }}</h2>
+        <p class="modal-sub">{{ t('exam_modal_sub') | default('Set the number of students and questions per student.') }}</p>
+        <form id="examModalForm">
+            <div class="form-row">
+                <div class="field">
+                    <label>{{ t('how_many_students') }}</label>
+                    <input type="number" id="num_students" name="num_students" min="1" value="1" required>
+                </div>
+                <div class="field">
+                    <label>{{ t('how_many_questions_per_student') }}</label>
+                    <input type="number" id="questions_per_student" name="questions_per_student" min="1" value="5" required>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button type="button" class="btn btn-primary" onclick="submitExamForm()">
+                    <i class="fas fa-paper-plane"></i> {{ t('generate') }}
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="closeExamModal()">{{ t('cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Processing Screen -->
+<div id="processingScreen">
+    <div class="processing-box">
+        <div class="spinner-ring"></div>
+        <div class="processing-title">{{ t('processing') }}</div>
+        <div class="processing-sub">{{ t('please_wait') }}</div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+════════════════════════════════════════════════════════════════════ -->
+<script>
+// ── Section navigation ──────────────────────────────────────────
+function showSection(section) {
+    document.querySelectorAll('[data-section]').forEach(el => {
+        el.classList.toggle('active', el.dataset.section === section);
+    });
+
+    document.querySelectorAll('.section-panel').forEach(s => s.classList.remove('active'));
+    const target = document.getElementById(`${section}-section`);
+    if (target) target.classList.add('active');
+
+    const top = document.querySelector('.hero');
+    if (window.innerWidth <= 900 && top) {
+        window.scrollTo({ top: top.offsetTop - 10, behavior: 'smooth' });
     }
 }
-      
 
-        function setHidden(form, name, value) {
-            let el = form.querySelector(`input[name="${name}"]`);
-            if (!el) {
-                el = document.createElement("input");
-                el.type = "hidden";
-                el.name = name;
-                form.appendChild(el);
-            }
-            el.value = value;
-        }
+// ── Processing screen ────────────────────────────────────────────
+function showProcessing() { document.getElementById('processingScreen').classList.add('show'); }
+function hideProcessing()  { document.getElementById('processingScreen').classList.remove('show'); }
 
+// ── Modal helpers ────────────────────────────────────────────────
+function openModal(id)  { document.getElementById(id).classList.add('open'); }
+function closeModalId(id){ document.getElementById(id).classList.remove('open'); }
 
-        async function postFormAjax(formEl, extraFormData) {
-            // Guard: ensure we received a FORM element
-            if (!formEl || formEl.tagName !== "FORM") {
-                console.error("postFormAjax expected a FORM, got:", formEl);
-                throw new Error("Internal UI error: invalid form element.");
-            }
-
-            const fd = new FormData(formEl);
-            if (extraFormData) {
-                for (const [k, v] of extraFormData.entries()) fd.append(k, v);
-            }
-
-            const url = "/upload"; // FORCE correct endpoint
-            console.log("[postFormAjax] POST", url, "fields:", [...fd.keys()]);
-
-            const res = await fetch(url, {
-                method: "POST",
-                body: fd,
-                headers: { "X-Requested-With": "XMLHttpRequest" }
-            });
-
-    const data = await res.json().catch(() => ({}));
-    if (!res.ok) {
-        throw new Error(data.error || `Request failed (status ${res.status}).`);
+function showModal() {
+    const file = document.getElementById('chapter_file');
+    if (!file || !file.files[0]) {
+        alert('Please select a chapter file first.');
+        return;
     }
+
+    const aiModel = document.getElementById('chapter_ai_model');
+    const hiddenAiModel = document.getElementById('hidden_ai_model');
+
+    if (aiModel && hiddenAiModel) {
+        hiddenAiModel.value = aiModel.value;
+    }
+
+    openModal('questionModal');
+}
+function closeModal()    { closeModalId('questionModal'); }
+
+function showRecModal() {
+    const file = document.getElementById('resume_file');
+    if (!file || !file.files[0]) { alert('Please select a resume file first.'); return; }
+    document.getElementById('hidden_rec_ai_model').value = document.getElementById('rec_ai_model').value;
+    openModal('recModal');
+}
+function closeRecModal() { closeModalId('recModal'); }
+
+function showExamModal() {
+    const files = document.getElementById('exam_files');
+    if (!files || !files.files[0]) { alert('Please select at least one file first.'); return; }
+    openModal('examModal');
+}
+function closeExamModal(){ closeModalId('examModal'); }
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal').forEach(m => {
+    m.addEventListener('click', e => { if (e.target === m) m.classList.remove('open'); });
+});
+
+// ── AJAX helpers ─────────────────────────────────────────────────
+async function postFormAjax(form) {
+    const fd = new FormData(form);
+    const res = await fetch('/upload', {
+        method: 'POST',
+        body: fd,
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
     return data;
 }
 
-    (function () {
-        const gradeFormEl = document.getElementById("gradeUploadForm");
-        const resultsEl = document.getElementById("grade-results");
+// ── Output rendering ─────────────────────────────────────────────
+function showOutputPanel(panelId, preId, html) {
+    const panel = document.getElementById(panelId);
+    const pre   = document.getElementById(preId);
+    if (panel) { panel.classList.add('visible'); panel.style.display = 'block'; }
+    if (pre)   { pre.innerHTML = html; }
+}
+function renderResearch(result) {
+    const text = typeof result === 'string'
+        ? result
+        : (result.text || result.output || JSON.stringify(result, null, 2));
 
-        if (!gradeFormEl) return;
+    if (!text) return '';
 
-        gradeFormEl.addEventListener("submit", async function (e) {
-            e.preventDefault();
+    let html = esc(text);
 
-            // Validate files
-            const [keyInput, ansInput] = gradeFormEl.querySelectorAll('input[type="file"]');
-            if (!keyInput?.files?.length || !ansInput?.files?.length) {
-            alert("Please upload both the Key PDF and the Answer Sheet PDF.");
-            return;
-            }
+    // headings
+    html = html.replace(/^### (.*)$/gm, '<h4 style="margin:18px 0 8px; color:var(--text-primary);">$1</h4>');
+    html = html.replace(/^## (.*)$/gm, '<h3 style="margin:22px 0 10px; color:var(--text-primary);">$1</h3>');
+    html = html.replace(/^# (.*)$/gm, '<h2 style="margin:0 0 14px; color:var(--text-primary);">$1</h2>');
 
-            const formData = new FormData(gradeFormEl);
+    // bold
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
 
-            // 30s timeout so overlay can't hang forever
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 30000);
+    // bullet lines
+    html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/gs, '<ul class="pretty-list">$1</ul>');
 
-            try {
-            showProcessing();
+    // paragraphs / line breaks
+    html = html.replace(/\n\n+/g, '</p><p class="pretty-p">');
+    html = `<div class="letter-box"><p class="pretty-p">${html}</p></div>`;
+    html = html.replace(/\n/g, '<br>');
 
-            const res = await fetch(gradeFormEl.action || "{{ url_for('grade_run') }}", {
-                method: "POST",
-                body: formData,
-                headers: { "X-Requested-With": "XMLHttpRequest" },
-                signal: controller.signal
-            });
+    return html;
+}
+function renderAiOutput(action, result) {
+    const panelMap = {
+        structured: ['syllabus-output',  'syllabus-output-pre'],
+        concepts:   ['chapter-output',   'chapter-output-pre'],
+        questions:  ['chapter-output',   'chapter-output-pre'],
+        recommendation: ['resume-output','resume-output-pre'],
+        exam_papers:['exam-output',      'exam-output-pre'],
+        research:   ['research-output',  'research-output-pre'],
+    };
 
-            const html = await res.text();
+    const [panelId, preId] = panelMap[action] || ['research-output','research-output-pre'];
 
-            // If login_required redirected us, Flask will serve the login page.
-            const wasRedirected = res.redirected || /<form[^>]*action="[^"]*login/i.test(html);
-
-            resultsEl.style.display = "block";
-
-            if (!res.ok || wasRedirected) {
-                resultsEl.innerHTML = `
-                <div class="error">
-                    Grading failed ${wasRedirected ? "(authentication required)" : `(status ${res.status})`}.
-                </div>
-                <div class="final-output" style="margin-top:10px; max-height:300px; overflow:auto;">
-                    ${html}
-                </div>`;
-                return;
-            }
-
-            // Success: inject the returned HTML (grade_result.html or fragment)
-            resultsEl.innerHTML = html;
-
-            } catch (err) {
-            resultsEl.style.display = "block";
-            resultsEl.innerHTML = `
-                <div class="error">
-                ${err.name === "AbortError" ? "Request timed out." : "Failed to run evaluation."}
-                </div>`;
-            console.error("Grading AJAX error:", err);
-            } finally {
-            clearTimeout(timeoutId);
-            hideProcessing(); // always hide spinner
-            }
-        });
-        })();
-
-
-        function updateRightPanel(section) {
-            const card = document.getElementById("ai-right-panel");
-
-            // ✅ Guard: if the panel does not exist, do nothing
-            if (!card) return;
-
-            const visibleFor = ["syllabus", "chapter", "resume", "exam"];
-            card.style.display = visibleFor.includes(section) ? "block" : "none";
-        }
-
-    async function runAsyncGrade() {
-        const keyFile = document.querySelector('input[name="key_pdf"]').files[0];
-        const ansFile = document.querySelector('input[name="answer_pdf"]').files[0];
-
-        if (!keyFile || !ansFile) {
-            alert("Please upload both the Key and Answer PDFs first.");
-            return;
-        }
-
-        const formData = new FormData();
-        formData.append("key_pdf", keyFile);
-        formData.append("ans_pdf", ansFile);
-
-        const provider = document.getElementById("grading_provider")?.value || "groq";
-        formData.set("grading_provider", provider);
-
-
-        showProcessing();
-
-        // 1. Submit async job
-        const res = await fetch("{{ url_for('grade_async') }}", {
-            method: "POST",
-            body: formData
-        });
-
-        const data = await res.json();
-        const task_id = data.task_id;
-
-        // 2. Poll server
-        const poll = setInterval(async () => {
-            const r = await fetch(`/status_json/${task_id}`);
-            const status = await r.json();
-
-            // Still processing
-            if (!status.done) {
-                console.log("Status:", status.status);
-                return;
-            }
-
-            // Done
-            clearInterval(poll);
-            hideProcessing();
-
-            const resultsEl = document.getElementById("grade-results");
-            resultsEl.style.display = "block";
-            resultsEl.innerHTML = status.html;
-
-        }, 2000);
-    }
-        
-
-        async function submitChapterConcepts() {
-        const form = document.getElementById("chapterForm");
-
-        let actionInput = form.querySelector('input[name="action"]');
-        if (!actionInput) {
-            actionInput = document.createElement("input");
-            actionInput.type = "hidden";
-            actionInput.name = "action";
-            form.appendChild(actionInput);
-        }
-        actionInput.value = "concepts";
-
-        showProcessing();
-        try {
-            const data = await postFormAjax(form);
-            renderAiOutput("concepts", data.result ?? data);
-        } catch (e) {
-            renderAiOutput("concepts", { error: e.message });
-            alert(e.message);
-        } finally {
-            hideProcessing();
-        }
+    if (!result || result.error) {
+        showOutputPanel(
+            panelId,
+            preId,
+            `<div class="ui-error"><i class="fas fa-exclamation-circle"></i> ${result?.error || 'Unknown error occurred.'}</div>`
+        );
+        return;
     }
 
+    let html = '';
 
-        function formatMB(bytes) {
-        return (bytes / (1024 * 1024)).toFixed(1);
-        }
-
-        function showSoftWarning(el, msg) {
-        if (!el) return;
-        el.innerHTML = msg;
-        el.style.display = "block";
-        }
-
-        function hideSoftWarning(el) {
-        if (!el) return;
-        el.innerHTML = "";
-        el.style.display = "none";
-        }
-
-        // Tune these safely
-        const CHAPTER_WARN_MB = 10;   // warn above 10MB
-        const CHAPTER_WARN_MB_HARD = 20; // stronger message above 20MB
-
-        function evaluateChapterFileSoftWarning() {
-        const input = document.getElementById("chapter_file");
-        const warnEl = document.getElementById("chapterSoftWarning");
-        if (!input || !warnEl) return;
-
-        const file = input.files && input.files[0];
-        if (!file) {
-            hideSoftWarning(warnEl);
-            return;
-        }
-
-        const mb = file.size / (1024 * 1024);
-
-        if (mb >= CHAPTER_WARN_MB_HARD) {
-            showSoftWarning(
-            warnEl,
-            `<strong>Heads up:</strong> This file is ${formatMB(file.size)} MB. Large chapters may take longer, time out, or produce partial results. For best results, try a smaller module or split the PDF.`
-            );
-        } else if (mb >= CHAPTER_WARN_MB) {
-            showSoftWarning(
-            warnEl,
-            `<strong>Note:</strong> This file is ${formatMB(file.size)} MB. Processing may be slow and outputs may be less reliable for very large chapters.`
-            );
-        } else {
-            hideSoftWarning(warnEl);
-        }
-        }
-
-       document.getElementById("researchForm").addEventListener("submit", async function (event) {
-            event.preventDefault();
-
-            const topicInput = document.getElementById("topic");
-            const fileInput = document.getElementById("research_file");
-
-            const topic = topicInput ? topicInput.value.trim() : "";
-            const hasTopic = topic !== "";
-            const hasFile = fileInput && fileInput.files && fileInput.files.length > 0;
-
-            console.log("Topic value:", topic);
-            console.log("Has topic:", hasTopic);
-            console.log("Has file:", hasFile);
-
-            if (!hasTopic && !hasFile) {
-                alert("Please enter a topic or upload a file.");
-                return;
-            }
-
-            showProcessing();
-            try {
-                const fd = new FormData(this);
-                fd.set("action", "research");
-
-                const res = await fetch("/upload", {
-                    method: "POST",
-                    body: fd,
-                    headers: { "X-Requested-With": "XMLHttpRequest" }
-                });
-
-                const data = await res.json().catch(() => ({}));
-
-                if (!res.ok) {
-                    throw new Error(data.error || `Request failed (status ${res.status})`);
-                }
-
-                renderAiOutput(data.action || "research",data.result ?? data);
-            } catch (e) {
-                console.error(e);
-                renderAiOutput("research", { error: e.message });
-                alert(e.message);
-            } finally {
-                hideProcessing();
-            }
-        });
-
-        function toggleResearchInput() {
-    const selected = document.querySelector('input[name="input_mode"]:checked');
-    const mode = selected ? selected.value : "topic";
-
-    const topicDiv = document.getElementById("topic_input");
-    const fileDiv = document.getElementById("file_input");
-    const topicInput = document.getElementById("topic");
-    const fileInput = document.getElementById("research_file");
-
-    if (mode === "topic") {
-        topicDiv.style.display = "block";
-        fileDiv.style.display = "none";
-        if (fileInput) fileInput.value = "";
+    if (action === 'structured') {
+        html = renderStructured(result);
+    } else if (action === 'concepts') {
+        html = renderConcepts(result);
+    } else if (action === 'questions') {
+        html = renderQuestions(result);
+    } else if (action === 'exam_papers') {
+        html = renderExamPapers(result);
+    } else if (action === 'recommendation') {
+        html = renderLetter(result);
+    } else if (action === 'research') {
+        html = renderResearch(result);
+    } else if (typeof result === 'string') {
+        html = prettyText(result);
     } else {
-        topicDiv.style.display = "none";
-        fileDiv.style.display = "block";
-        if (topicInput) topicInput.value = "";
+        html = prettyText(JSON.stringify(result, null, 2));
+    }
+
+    showOutputPanel(panelId, preId, html);
+}
+
+function renderStructured(result) {
+    if (!result) return '';
+
+    if (typeof result === 'string') {
+        return prettyText(result);
+    }
+
+    let html = '<div class="output-stack">';
+
+    if (result.course_overview) {
+        html += `
+            <div class="output-section">
+                <div class="output-section-title">Course Overview</div>
+                <p>${esc(result.course_overview).replace(/\n/g, '<br>')}</p>
+            </div>
+        `;
+    }
+
+    const sections = [
+        ['Learning Objectives', result.learning_objectives],
+        ['Pacing Suggestions', result.pacing_suggestions],
+        ['Assessment Alignment', result.assessment_alignment],
+        ['Clarity Improvements', result.clarity_improvements],
+        ['Red Flags or Gaps', result.red_flags_or_gaps],
+    ];
+
+    sections.forEach(([title, value]) => {
+        if (!value) return;
+
+        html += `<div class="output-section">`;
+        html += `<div class="output-section-title">${esc(title)}</div>`;
+
+        if (Array.isArray(value)) {
+            html += `<ul>`;
+            value.forEach(item => {
+                html += `<li>${esc(String(item))}</li>`;
+            });
+            html += `</ul>`;
+        } else {
+            html += `<p>${esc(String(value)).replace(/\n/g, '<br>')}</p>`;
+        }
+
+        html += `</div>`;
+    });
+
+    html += '</div>';
+
+    return html;
+}
+
+function prettyText(text) {
+    if (!text) return '';
+    const escaped = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    return `<div class="pretty-text">${escaped.replace(/\n\n/g,'<div class="p-gap"></div>').replace(/\n/g,'<br>')}</div>`;
+}
+
+function renderQuestions(result) {
+    const groups = result.questions || [];
+    if (!groups.length) return prettyText(JSON.stringify(result, null, 2));
+    let html = '';
+    groups.forEach((g, i) => {
+        html += `<div style="margin-bottom:18px;"><div style="font-size:0.8rem;color:var(--text-muted);font-family:var(--font-mono);margin-bottom:8px;letter-spacing:0.04em;">Q${i+1}</div>`;
+        html += `<div class="q-title pretty-p">${esc(g.question || g)}</div>`;
+        if (g.options) { g.options.forEach(o => { html += `<div style="padding:4px 0 4px 16px;font-size:0.87rem;color:var(--text-secondary);">${esc(o)}</div>`; }); }
+        if (g.answer) { html += `<details class="q-answer" style="margin-top:6px;"><summary>Show Answer</summary><div class="q-answer-body">${esc(g.answer)}</div></details>`; }
+        html += '</div>';
+    });
+    return html;
+}
+
+function renderExamPapers(result) {
+    const exams = result.exams || result.students || [];
+    if (!Array.isArray(exams) || !exams.length) {
+        return prettyText(JSON.stringify(result, null, 2));
+    }
+
+    let html = '';
+
+    exams.forEach((exam, idx) => {
+        const studentLabel =
+            exam.student ||
+            exam.student_name ||
+            exam.title ||
+            `Student ${idx + 1}`;
+
+        html += `<div class="exam-student-block">`;
+        html += `<div class="exam-student-title">${esc(studentLabel)}</div>`;
+        html += `<ol class="exam-question-list">`;
+
+        (exam.questions || []).forEach((q, qidx) => {
+            html += `<li class="exam-question-item">`;
+            html += `<div class="q-title">${esc(q.question || `Question ${qidx + 1}`)}</div>`;
+
+            if (Array.isArray(q.options)) {
+                q.options.forEach(opt => {
+                    html += `<div style="padding:3px 0 3px 12px; font-size:0.85rem; color:var(--text-muted);">${esc(opt)}</div>`;
+                });
+            }
+
+            if (q.reference || q.difficulty || q.answer) {
+                html += `<div class="q-meta">`;
+                if (q.reference) html += `<span>Ref: ${esc(q.reference)}</span>`;
+                if (q.difficulty) html += `<span>Difficulty: ${esc(q.difficulty)}</span>`;
+                html += `</div>`;
+            }
+
+            if (q.answer) {
+                html += `
+                    <details class="q-answer" style="margin-top:6px;">
+                        <summary>Show Answer</summary>
+                        <div class="q-answer-body">${esc(q.answer)}</div>
+                    </details>
+                `;
+            }
+
+            html += `</li>`;
+        });
+
+        html += `</ol></div>`;
+    });
+
+    return html;
+}
+
+function renderLetter(result) {
+    const text = result.letter || result.text || result;
+    if (typeof text === 'string') {
+        const paras = text.split(/\n\n+/);
+        return `<div class="letter-box">${paras.map(p => `<div class="letter-p">${esc(p).replace(/\n/g,'<br>')}</div>`).join('')}</div>`;
+    }
+    return prettyText(JSON.stringify(result, null, 2));
+}
+
+function renderResearch(result) {
+    const text = typeof result === 'string'
+        ? result
+        : (result.text || result.output || JSON.stringify(result, null, 2));
+
+    if (!text) return '';
+
+    let html = esc(text);
+
+    // headings
+    html = html.replace(/^### (.*)$/gm, '<h4 style="margin:18px 0 8px; color:var(--text-primary);">$1</h4>');
+    html = html.replace(/^## (.*)$/gm, '<h3 style="margin:22px 0 10px; color:var(--text-primary);">$1</h3>');
+    html = html.replace(/^# (.*)$/gm, '<h2 style="margin:0 0 14px; color:var(--text-primary);">$1</h2>');
+
+    // bold
+    html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+
+    // bullet lines
+    html = html.replace(/^- (.*)$/gm, '<li>$1</li>');
+    html = html.replace(/(<li>.*<\/li>)/gs, '<ul class="pretty-list">$1</ul>');
+
+    // paragraphs / line breaks
+    html = html.replace(/\n\n+/g, '</p><p class="pretty-p">');
+    html = `<div class="letter-box"><p class="pretty-p">${html}</p></div>`;
+    html = html.replace(/\n/g, '<br>');
+
+    return html;
+}
+
+function renderConcepts(result) {
+    if (!result) return '';
+
+    if (typeof result === 'string') {
+        return prettyText(result);
+    }
+
+    const concepts = result.concepts || result.core_concepts || result.topics || result.sections || result;
+
+    if (!Array.isArray(concepts)) {
+        return prettyText(JSON.stringify(result, null, 2));
+    }
+
+    let html = '<div class="output-stack">';
+
+    concepts.forEach((item, index) => {
+        if (typeof item === 'string') {
+            html += `
+                <div class="output-item">
+                    <div class="output-item-title">Concept ${index + 1}</div>
+                    <div class="output-item-body">${esc(item).replace(/\n/g, '<br>')}</div>
+                </div>
+            `;
+            return;
+        }
+
+        const title =
+            item.title ||
+            item.section ||
+            item.name ||
+            item.concept ||
+            `Concept ${index + 1}`;
+
+        const description =
+            item.description ||
+            item.summary ||
+            item.text ||
+            '';
+
+        html += `
+            <div class="output-item">
+                <div class="output-item-title">${esc(title)}</div>
+                ${description ? `<div class="output-item-body">${esc(description).replace(/\n/g, '<br>')}</div>` : ''}
+            </div>
+        `;
+    });
+
+    html += '</div>';
+    return html;
+}
+
+function esc(s) {
+    return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── Copy helper ──────────────────────────────────────────────────
+function copyOutput(preId) {
+    const el = document.getElementById(preId);
+    if (!el) return;
+    navigator.clipboard.writeText(el.innerText || el.textContent).then(() => {
+        showToast('Copied to clipboard!');
+    });
+}
+
+function copyCitation() {
+    const el = document.getElementById('citation-output');
+    if (!el) return;
+    navigator.clipboard.writeText(el.textContent).then(() => showToast('Citation copied!'));
+}
+
+function showToast(msg) {
+    const t = document.createElement('div');
+    t.textContent = msg;
+    Object.assign(t.style, {
+        position:'fixed', bottom:'24px', right:'24px',
+        background:'var(--bg-card)', border:'1px solid var(--border)',
+        color:'var(--text-primary)', padding:'10px 18px',
+        borderRadius:'var(--radius)', fontSize:'0.84rem',
+        boxShadow:'var(--shadow)', zIndex:'9999',
+        animation:'fadeUp 0.25s ease', fontFamily:'var(--font-body)'
+    });
+    document.body.appendChild(t);
+    setTimeout(() => t.remove(), 2500);
+}
+
+// ── Syllabus form ────────────────────────────────────────────────
+document.getElementById('syllabusForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    showProcessing();
+
+    try {
+        const fd = new FormData(this);
+        fd.set('action', 'structured');
+
+        const res = await fetch('/upload', {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+
+        renderAiOutput('structured', data.result ?? data);
+        showSection('syllabus');
+    } catch (err) {
+        renderAiOutput('structured', { error: err.message });
+        showSection('syllabus');
+    } finally {
+        hideProcessing();
+    }
+});
+
+// ── Chapter concepts ─────────────────────────────────────────────
+async function submitChapterConcepts() {
+    const form = document.getElementById('chapterForm');
+    const file = document.getElementById('chapter_file');
+
+    if (!file || !file.files[0]) {
+        alert('Please select a chapter file first.');
+        return;
+    }
+
+    let actionInput = form.querySelector('input[name="action"]');
+    if (!actionInput) {
+        actionInput = document.createElement('input');
+        actionInput.type = 'hidden';
+        actionInput.name = 'action';
+        form.appendChild(actionInput);
+    }
+
+    actionInput.value = 'concepts';
+
+    showProcessing();
+    try {
+        const data = await postFormAjax(form);
+        renderAiOutput('concepts', data.result ?? data);
+        showSection('chapter');
+    } catch (e) {
+        renderAiOutput('concepts', { error: e.message });
+        showSection('chapter');
+    } finally {
+        hideProcessing();
     }
 }
 
-        document.addEventListener("DOMContentLoaded", function () {
-            toggleResearchInput();
+// ── Exam form ────────────────────────────────────────────────────
+async function submitExamForm() {
+    closeExamModal();
+    const examForm = document.getElementById('examUploadForm');
+    const modalForm = document.getElementById('examModalForm');
+    const fd = new FormData(examForm);
+    fd.append('num_students', document.getElementById('num_students').value);
+    fd.append('questions_per_student', document.getElementById('questions_per_student').value);
+    fd.set('action', 'exam_papers');
+    showProcessing();
+    try {
+        const res = await fetch('/upload', {
+            method: 'POST', body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+        renderAiOutput('exam_papers', data.result ?? data);
+    } catch(e) {
+        renderAiOutput('exam_papers', { error: e.message });
+    } finally { hideProcessing(); }
+}
 
-            const researchForm = document.getElementById("researchForm");
-            if (!researchForm) return;
+// ── Grading ──────────────────────────────────────────────────────
+async function runAsyncGrade() {
+    const keyFile = document.querySelector('input[name="key_pdf"]')?.files[0];
+    const ansFile = document.querySelector('input[name="answer_pdf"]')?.files[0];
+    if (!keyFile || !ansFile) { alert('Please upload both the Key and Answer PDFs.'); return; }
 
-            researchForm.addEventListener("submit", async function (event) {
-                event.preventDefault();
+    const fd = new FormData();
+    fd.append('key_pdf', keyFile);
+    fd.append('ans_pdf', ansFile);
+    fd.append('grading_provider', document.getElementById('grading_provider')?.value || 'groq');
 
-                const selected = document.querySelector('input[name="input_mode"]:checked');
-                const mode = selected ? selected.value : "topic";
+    showProcessing();
+    try {
+        const res = await fetch('{{ url_for("grade_async") }}', { method: 'POST', body: fd });
+        const data = await res.json();
+        const task_id = data.task_id;
 
-                const topicInput = document.getElementById("topic");
-                const fileInput = document.getElementById("research_file");
+        const poll = setInterval(async () => {
+            const r = await fetch(`/status_json/${task_id}`);
+            const status = await r.json();
+            if (!status.done) return;
+            clearInterval(poll);
+            hideProcessing();
+            const el = document.getElementById('grade-results');
+            el.style.display = 'block';
+            el.innerHTML = status.html;
+        }, 2000);
+    } catch(e) {
+        hideProcessing();
+        document.getElementById('grade-results').style.display = 'block';
+        document.getElementById('grade-results').innerHTML =
+            `<div class="callout warning"><i class="fas fa-exclamation-triangle"></i> Grading error: ${e.message}</div>`;
+    }
+}
 
-                const topic = topicInput ? topicInput.value.trim() : "";
-                const hasTopic = mode === "topic" && topic !== "";
-                const hasFile = mode === "file" && fileInput && fileInput.files && fileInput.files.length > 0;
+// ── Research form ────────────────────────────────────────────────
+function toggleResearchInput() {
+    const mode = document.querySelector('input[name="input_mode"]:checked')?.value || 'topic';
+    const topicDiv = document.getElementById('topic_input');
+    const fileDiv  = document.getElementById('file_input');
+    const topicInput = document.getElementById('topic');
+    const fileInput  = document.getElementById('research_file');
 
-                if (!hasTopic && !hasFile) {
-                    alert(mode === "topic" ? "Please enter a research topic." : "Please upload a file.");
-                    return;
-                }
+    if (mode === 'topic') {
+        topicDiv.classList.remove('hidden'); fileDiv.classList.add('hidden');
+        if (fileInput) fileInput.value = '';
+    } else {
+        fileDiv.classList.remove('hidden'); topicDiv.classList.add('hidden');
+        if (topicInput) topicInput.value = '';
+    }
+}
 
-                showProcessing();
-                try {
-                    const fd = new FormData(this);
-                    fd.set("action", "research");
+document.addEventListener('DOMContentLoaded', function() {
+    toggleResearchInput();
+    showSection('syllabus');
+    hideProcessing();
 
-                    const res = await fetch("/upload", {
-                        method: "POST",
-                        body: fd,
-                        headers: { "X-Requested-With": "XMLHttpRequest" }
-                    });
+    document.getElementById('researchForm')?.addEventListener('submit', async function(e) {
+        e.preventDefault();
+        const mode = document.querySelector('input[name="input_mode"]:checked')?.value || 'topic';
+        const topic = document.getElementById('topic')?.value?.trim() || '';
+        const fileInput = document.getElementById('research_file');
+        const hasTopic = mode === 'topic' && topic !== '';
+        const hasFile  = mode === 'file'  && fileInput?.files?.length > 0;
+        if (!hasTopic && !hasFile) {
+            alert(mode === 'topic' ? 'Please enter a research topic.' : 'Please upload a file.');
+            return;
+        }
+        showProcessing();
+        try {
+            const fd = new FormData(this);
+            fd.set('action', 'research');
+            const res = await fetch('/upload', { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+            renderAiOutput(data.action || 'research', data.result ?? data);
+        } catch(e) {
+            renderAiOutput('research', { error: e.message });
+        } finally { hideProcessing(); }
+    });
+});
 
-                    const data = await res.json().catch(() => ({}));
+// ── File size soft warning ────────────────────────────────────────
+const CHAPTER_WARN_MB = 10, CHAPTER_WARN_MB_HARD = 20;
+function evaluateChapterFileSoftWarning() {
+    const input = document.getElementById('chapter_file');
+    const warnEl = document.getElementById('chapterSoftWarning');
+    if (!input || !warnEl) return;
+    const file = input.files?.[0];
+    if (!file) { warnEl.style.display = 'none'; return; }
+    const mb = file.size / (1024*1024);
+    if (mb >= CHAPTER_WARN_MB_HARD) {
+        warnEl.innerHTML = `<strong>Heads up:</strong> This file is ${mb.toFixed(1)} MB. Large chapters may time out or produce partial results. Consider splitting the PDF.`;
+        warnEl.style.display = 'block';
+    } else if (mb >= CHAPTER_WARN_MB) {
+        warnEl.innerHTML = `<strong>Note:</strong> This file is ${mb.toFixed(1)} MB. Processing may be slower for very large chapters.`;
+        warnEl.style.display = 'block';
+    } else {
+        warnEl.style.display = 'none';
+    }
+}
 
-                    if (!res.ok) {
-                        throw new Error(data.error || `Request failed (status ${res.status})`);
-                    }
+// ── Citation generator ───────────────────────────────────────────
+function updateCitationFields() {
+    // All source types use same journal fields for now (extensible)
+    // Can be expanded per source type
+}
 
-                    renderAiOutput(data.action || "research", data.result ?? data);
-                } catch (e) {
-                    console.error(e);
-                    renderAiOutput("research", { error: e.message });
-                    alert(e.message);
-                } finally {
-                    hideProcessing();
-                }
-            });
+function generateCitation() {
+    const style  = document.getElementById('citation_style').value;
+    const type   = document.getElementById('source_type').value;
+    const author = document.getElementById('cit_author').value.trim();
+    const year   = document.getElementById('cit_year').value.trim();
+    const title  = document.getElementById('cit_title').value.trim();
+    const journal= document.getElementById('cit_journal').value.trim();
+    const vol    = document.getElementById('cit_vol').value.trim();
+    const doi    = document.getElementById('cit_doi').value.trim();
+
+    if (!author || !title) { alert('Author and Title are required fields.'); return; }
+
+    let citation = '';
+
+    if (style === 'APA') {
+        // APA 7th: Author, A. (Year). Title. Journal, Volume(Issue), pages. DOI
+        citation = `${author} (${year || 'n.d.'}). ${title}. `;
+        if (journal) citation += `*${journal}*`;
+        if (vol) citation += `, ${vol}`;
+        citation += '.';
+        if (doi) citation += ` ${doi}`;
+    } else if (style === 'MLA') {
+        // MLA 9th: Author. "Title." Journal, vol., no., year, pp.
+        citation = `${author}. "${title}."`;
+        if (journal) citation += ` *${journal}*,`;
+        if (vol) citation += ` ${vol},`;
+        if (year) citation += ` ${year}.`;
+        if (doi) citation += ` ${doi}.`;
+    } else if (style === 'Chicago') {
+        // Chicago Author-Date
+        citation = `${author}. ${year || 'n.d.'}. "${title}."`;
+        if (journal) citation += ` *${journal}*`;
+        if (vol) citation += ` ${vol}`;
+        citation += '.';
+        if (doi) citation += ` ${doi}.`;
+    } else if (style === 'IEEE') {
+        // IEEE: [1] A. Author, "Title," Journal, vol. X, no. Y, pp. Z, Year.
+        const shortAuthor = author.split(',')[0] || author;
+        citation = `${shortAuthor}, "${title},"`;
+        if (journal) citation += ` *${journal}*,`;
+        if (vol) citation += ` ${vol},`;
+        if (year) citation += ` ${year}.`;
+        if (doi) citation += ` doi: ${doi}.`;
+    } else if (style === 'Harvard') {
+        // Harvard: Author (Year) 'Title', Journal, vol(issue), pp. DOI.
+        citation = `${author} (${year || 'n.d.'}) '${title}',`;
+        if (journal) citation += ` *${journal}*,`;
+        if (vol) citation += ` ${vol}.`;
+        if (doi) citation += ` Available at: ${doi}.`;
+    }
+
+    document.getElementById('citation-output').textContent = citation;
+    document.getElementById('citation-result-card').style.display = 'block';
+}
+
+function clearCitation() {
+    ['cit_author','cit_year','cit_title','cit_journal','cit_vol','cit_doi'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+    });
+    document.getElementById('citation-result-card').style.display = 'none';
+}
+
+// ── Recommendation form transfer ─────────────────────────────────
+document.getElementById('recForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    closeRecModal();
+    showProcessing();
+
+    const resumeFile = document.getElementById('resume_file')?.files[0];
+    if (!resumeFile) { hideProcessing(); alert('No resume file selected.'); return; }
+
+    const fd = new FormData(this);
+    fd.set('resume_file', resumeFile);
+
+    try {
+        const res = await fetch('/upload', { method: 'POST', body: fd, headers: {'X-Requested-With':'XMLHttpRequest'} });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+        renderAiOutput('recommendation', data.result ?? data);
+        showSection('resume');
+    } catch(e) {
+        renderAiOutput('recommendation', { error: e.message });
+        showSection('resume');
+    } finally { hideProcessing(); }
+});
+
+// ── Questions form AJAX ───────────────────────────────────────────
+document.getElementById('modalForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    closeModal();
+    showProcessing();
+
+    const chapterFile = document.getElementById('chapter_file')?.files[0];
+    if (!chapterFile) {
+        hideProcessing();
+        alert('No chapter file selected.');
+        return;
+    }
+
+    const fd = new FormData(this);
+    fd.set('chapter_file', chapterFile);
+    fd.set('action', 'questions');
+
+    try {
+        const res = await fetch('/upload', {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
         });
 
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
 
-    </script>
-
-
+        renderAiOutput('questions', data.result ?? data);
+        showSection('chapter');
+    } catch (e) {
+        renderAiOutput('questions', { error: e.message });
+        showSection('chapter');
+    } finally {
+        hideProcessing();
+    }
+});
+</script>
 </body>
-
-</html
+</html>

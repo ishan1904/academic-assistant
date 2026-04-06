@@ -43,6 +43,7 @@ import traceback
 import threading
 import socket
 import time
+import hashlib
 from datetime import datetime, timedelta
 from functools import wraps
 from typing import Any, Dict, List, Tuple, Optional
@@ -870,9 +871,11 @@ def process_grading(
                 )
 
                 if cached:
+                    print(f"[CACHE HIT] grading q={idx} provider={grading_provider}")
                     out = cached
                     out["cached"] = True
                 else:
+                    print(f"[CACHE MISS] grading q={idx} provider={grading_provider}")
                     out = grade_one(
                             rubric,
                             student_for_grading,
@@ -891,9 +894,9 @@ def process_grading(
 
         results[idx] = {
             "question": kqa.get("question", "") or f"Q{idx}",
-            "correct_answer": rubric,
-            "student_answer": student_for_display or "[No matched student block detected]",
-            "evaluation": graded.get("feedback", ""),
+            "correct_answer": (rubric or "").strip(),
+            "student_answer": (student_for_display or "[No matched student block detected]").strip(),
+            "evaluation": (graded.get("feedback", "") or "").strip(),
             "score": score,
             "match_mode": match_mode,
             "cached": out.get("cached", False) if match_mode != "no-match" and not _is_mcq_block(rubric) else False,
@@ -1391,8 +1394,8 @@ def grade_run():
         key_text = extract_text_from_pdf_auto(key_path)
         ans_text = extract_text_from_pdf_auto(ans_path, force_ocr=force_ocr)
 
-        key_doc_id = uuid.uuid4().hex
-        stu_doc_id = uuid.uuid4().hex
+        key_doc_id = stable_doc_id(key_text, "key")
+        stu_doc_id = stable_doc_id(ans_text, "student")
 
         key_qas = split_into_qas_by_qid(key_text)
         stu_qas = split_into_qas_by_qid(ans_text)
@@ -1483,8 +1486,8 @@ def _async_worker(task_id: str, key_path: str, ans_path: str, force_ocr: bool = 
         TASKS[task_id]["phase"] = "grade"
         TASKS[task_id]["status"] = "Grading (parsing questions)"
 
-        key_doc_id = uuid.uuid4().hex
-        stu_doc_id = uuid.uuid4().hex
+        key_doc_id = stable_doc_id(key_text, "key")
+        stu_doc_id = stable_doc_id(ans_text, "student")
 
         key_qas_map = split_into_qas_by_qid(key_text)
         stu_qas_map = split_into_qas_by_qid(ans_text)
@@ -1882,6 +1885,16 @@ def upload_file():
         return jsonify(payload)
 
     return render_template("index.html", success=json.dumps(payload, indent=2))
+
+def stable_doc_id(text: str, role: str) -> str:
+    """
+    Build a stable cache identity from extracted text instead of random UUIDs.
+    This allows repeated grading runs of the same content to hit cache.
+    """
+    version = "grading-v1"
+    normalized = (text or "").strip()
+    raw = f"{version}||{role}||{normalized}".encode("utf-8")
+    return hashlib.sha256(raw).hexdigest()
 
 # -----------------------------------------------------------------------------
 # Download routes for generated files (kept compatible with your templates)
