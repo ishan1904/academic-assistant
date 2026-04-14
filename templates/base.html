@@ -1,0 +1,610 @@
+<!DOCTYPE html>
+<html lang="{{ get_lang() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ t("app_title") }}{% endblock %}</title>
+    <link rel="icon" type="image/png" href="{{ url_for('static', filename='image/favicon.png') }}?v=2">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,300&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <style>
+        /* ─── CSS Variables ─────────────────────────────────────────── */
+        :root {
+            --bg:           #0c0f14;
+            --bg-surface:   #131820;
+            --bg-card:      #1a2130;
+            --bg-card2:     #1f2a3d;
+            --border:       rgba(255,255,255,0.07);
+            --border-glow:  rgba(84,180,255,0.25);
+            --accent:       #54b4ff;
+            --accent2:      #7dd3fc;
+            --accent-dim:   rgba(84,180,255,0.12);
+            --green:        #4ade80;
+            --amber:        #fbbf24;
+            --red:          #f87171;
+            --text-primary: #f0f4ff;
+            --text-secondary:#8fa3bf;
+            --text-muted:   #5a7290;
+            --radius:       12px;
+            --radius-lg:    18px;
+            --shadow:       0 8px 32px rgba(0,0,0,0.4);
+            --shadow-glow:  0 0 40px rgba(84,180,255,0.08);
+            --font-body:    'DM Sans', sans-serif;
+            --font-display: 'DM Serif Display', serif;
+            --font-mono:    'JetBrains Mono', monospace;
+            --transition:   0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+
+        /* ─── Reset & Base ──────────────────────────────────────────── */
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        html { scroll-behavior: smooth; }
+        body {
+            font-family: var(--font-body);
+            background: var(--bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+            line-height: 1.6;
+        }
+
+        /* ─── Noise texture overlay ─────────────────────────────────── */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        /* ─── Topbar ────────────────────────────────────────────────── */
+        .topbar {
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 32px;
+            height: 62px;
+            background: rgba(12,15,20,0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .topbar-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+        }
+
+        .logo-mark {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 700;
+            color: #fff;
+            font-family: var(--font-mono);
+            flex-shrink: 0;
+        }
+
+        .logo-text {
+            font-family: var(--font-display);
+            font-size: 1.15rem;
+            color: var(--text-primary);
+            letter-spacing: 0.01em;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .lang-toggle {
+            display: flex;
+            align-items: center;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            overflow: hidden;
+            font-size: 0.78rem;
+            font-weight: 500;
+        }
+
+        .lang-toggle a {
+            padding: 5px 12px;
+            text-decoration: none;
+            color: var(--text-secondary);
+            transition: var(--transition);
+            font-family: var(--font-mono);
+            letter-spacing: 0.05em;
+        }
+
+        .lang-toggle a.active,
+        .lang-toggle a:hover {
+            background: var(--accent-dim);
+            color: var(--accent);
+        }
+
+        .lang-toggle .divider {
+            width: 1px;
+            height: 20px;
+            background: var(--border);
+        }
+
+        .user-chip {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 14px 5px 8px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 50px;
+            font-size: 0.82rem;
+        }
+
+        .user-avatar {
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 600;
+            color: #fff;
+            flex-shrink: 0;
+        }
+
+        .user-name { color: var(--text-secondary); }
+
+        .btn-ghost {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-size: 0.82rem;
+            font-family: var(--font-body);
+            cursor: pointer;
+            text-decoration: none;
+            transition: var(--transition);
+        }
+        .btn-ghost:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: var(--accent-dim);
+        }
+
+        .btn-danger {
+            background: rgba(248,113,113,0.1);
+            border-color: rgba(248,113,113,0.3);
+            color: var(--red);
+        }
+        .btn-danger:hover {
+            background: rgba(248,113,113,0.2);
+            border-color: var(--red);
+            color: var(--red);
+        }
+
+        /* ─── Page content wrapper ──────────────────────────────────── */
+        .page-content {
+            position: relative;
+            z-index: 1;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 3rem 2rem 5rem;
+        }
+
+        /* ─── Legal / info page styles ──────────────────────────────── */
+        .page-content h1 {
+            font-family: var(--font-display);
+            font-size: 2.2rem;
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .page-content h2 {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 2rem 0 0.6rem;
+            padding-bottom: 0.4rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-content h3 {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--accent2);
+            margin: 1.2rem 0 0.4rem;
+        }
+
+        .page-content p {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            margin-bottom: 0.85rem;
+            font-size: 0.95rem;
+        }
+
+        .page-content ul {
+            padding-left: 1.5rem;
+            margin-bottom: 0.85rem;
+        }
+
+        .page-content ul li {
+            color: var(--text-secondary);
+            line-height: 1.8;
+            font-size: 0.95rem;
+            margin-bottom: 0.2rem;
+        }
+
+        .page-content a {
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .page-content a:hover {
+            text-decoration: underline;
+        }
+
+        .page-meta {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            font-family: var(--font-mono);
+            margin-bottom: 2.5rem;
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        /* ─── Alert messages ────────────────────────────────────────── */
+        .alert {
+            padding: 0.85rem 1.25rem;
+            border-radius: var(--radius);
+            margin-bottom: 1.25rem;
+            font-size: 0.92rem;
+        }
+        .alert-success {
+            background: rgba(74,222,128,0.08);
+            border: 1px solid rgba(74,222,128,0.25);
+            color: var(--green);
+        }
+        .alert-error {
+            background: rgba(248,113,113,0.08);
+            border: 1px solid rgba(248,113,113,0.25);
+            color: var(--red);
+        }
+
+        /* ─── Footer ────────────────────────────────────────────────── */
+        .site-footer {
+            position: relative;
+            z-index: 1;
+            text-align: center;
+            padding: 2rem 1rem;
+            border-top: 1px solid var(--border);
+            margin-top: 3rem;
+        }
+
+        .site-footer-links {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 0.75rem;
+        }
+
+        .site-footer-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: var(--transition);
+        }
+
+        .site-footer-links a:hover {
+            color: var(--accent);
+        }
+
+        .site-footer p {
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin: 0;
+        }
+
+        {% block extra_styles %}{% endblock %}
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════ TOPBAR ═══════════════ -->
+<header class="topbar">
+    <a class="topbar-logo" href="{{ url_for('home') }}">
+        <div class="logo-mark">Ac</div>
+        <span class="logo-text">{{ t("app_title") }}</span>
+    </a>
+
+    <div class="topbar-right">
+        <div class="lang-toggle">
+            <a href="{{ url_for('set_lang', lang='en') }}"
+               class="{% if get_lang() == 'en' %}active{% endif %}">EN</a>
+            <div class="divider"></div>
+            <a href="{{ url_for('set_lang', lang='es') }}"
+               class="{% if get_lang() == 'es' %}active{% endif %}">ES</a>
+        </div>
+
+        {% if session.username %}
+        <div class="user-chip">
+            <div class="user-avatar">{{ session.username[0]|upper }}</div>
+            <span class="user-name">{{ session.username }}</span>
+        </div>
+        <a href="{{ url_for('logout') }}" class="btn-ghost btn-danger">
+            <i class="fas fa-sign-out-alt"></i> {{ t("logout") }}
+        </a>
+        {% else %}
+        <a href="{{ url_for('login') }}" class="btn-ghost">
+            <i class="fas fa-sign-in-alt"></i> {{ t("login") }}
+        </a>
+        <a href="{{ url_for('signup') }}" class="btn-ghost" style="border-color: var(--border-glow); color: var(--accent);">
+            {{ t("signup") }}
+        </a>
+        {% endif %}
+    </div>
+</header>
+
+<!-- ═══════════════ PAGE CONTENT ═══════════════ -->
+<div class="page-content">
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">{{ message }}</div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</div>
+
+<!-- ═══════════════ FOOTER ═══════════════ -->
+<footer class="site-footer">
+    <div class="site-footer-links">
+        <a href="{{ url_for('about') }}">About</a>
+        <a href="{{ url_for('contact') }}">Contact</a>
+        <a href="{{ url_for('privacy') }}">Privacy Policy</a>
+        <a href="{{ url_for('terms') }}">Terms of Service</a>
+    </div>
+    <p>© 2025 AI Academic Assistant. All rights reserved.</p>
+</footer>
+
+{% block extra_scripts %}{% endblock %}
+
+<!-- ═══════════════ FEEDBACK WIDGET ═══════════════ -->
+<div id="feedback-btn" onclick="toggleFeedback()" title="Give feedback">
+    <i class="fas fa-comment-dots"></i>
+    <span>Feedback</span>
+</div>
+
+<div id="feedback-popup">
+    <div id="feedback-header">
+        <span>Quick Feedback</span>
+        <button onclick="toggleFeedback()" id="feedback-close">✕</button>
+    </div>
+
+    <div id="star-row">
+        <span class="star" data-val="1">★</span>
+        <span class="star" data-val="2">★</span>
+        <span class="star" data-val="3">★</span>
+        <span class="star" data-val="4">★</span>
+        <span class="star" data-val="5">★</span>
+    </div>
+
+    <textarea id="feedback-msg" placeholder="Tell us what you think…" rows="3"></textarea>
+
+    <button id="feedback-submit" onclick="submitFeedback()">Send Feedback</button>
+    <p id="feedback-thanks" style="display:none;">✅ Thanks for your feedback!</p>
+</div>
+
+<style>
+#feedback-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border-glow);
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: var(--transition);
+    box-shadow: 0 4px 20px rgba(84,180,255,0.15);
+}
+#feedback-btn:hover {
+    background: rgba(84,180,255,0.2);
+    border-color: var(--accent);
+}
+
+#feedback-popup {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    right: 28px;
+    z-index: 9999;
+    width: 300px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+}
+
+#feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+
+#feedback-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    font-size: 1rem;
+    padding: 0;
+}
+
+#star-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 0.85rem;
+}
+
+.star {
+    font-size: 1.6rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: var(--transition);
+    user-select: none;
+}
+
+.star.active,
+.star:hover {
+    color: var(--amber);
+}
+
+#feedback-msg {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    font-family: var(--font-body);
+    resize: none;
+    box-sizing: border-box;
+    outline: none;
+    margin-bottom: 0.85rem;
+    transition: var(--transition);
+}
+
+#feedback-msg:focus {
+    border-color: var(--accent);
+    background: var(--bg-card2);
+}
+
+#feedback-submit {
+    width: 100%;
+    padding: 0.6rem;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+#feedback-submit:hover {
+    background: rgba(84,180,255,0.2);
+    border-color: var(--accent);
+}
+
+#feedback-thanks {
+    text-align: center;
+    color: var(--green);
+    font-size: 0.88rem;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 480px) {
+    .topbar { padding: 0 12px; }
+    .topbar-logo .logo-text { display: none; }
+    .topbar-right { gap: 6px; }
+    .user-name { display: none; }
+    .page-content { padding: 2rem 1rem 3rem; }
+    .page-content h1 { font-size: 1.6rem; }
+    .site-footer-links { gap: 1rem; }
+}
+
+</style>
+
+<script>
+let selectedRating = 0;
+
+function toggleFeedback() {
+    const popup = document.getElementById('feedback-popup');
+    popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+}
+
+document.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', () => {
+        selectedRating = parseInt(star.dataset.val);
+        document.querySelectorAll('.star').forEach(s => {
+            s.classList.toggle('active', parseInt(s.dataset.val) <= selectedRating);
+        });
+    });
+});
+
+async function submitFeedback() {
+    const message = document.getElementById('feedback-msg').value.trim();
+    if (!message && selectedRating === 0) return;
+
+    const formData = new FormData();
+    formData.append('rating', selectedRating + ' / 5 stars');
+    formData.append('message', message);
+    formData.append('page', window.location.pathname);
+    formData.append('_cc', 'elizabeth.diaz@uta.edu');
+    formData.append('_subject', 'Feedback — AI Academic Assistant');
+
+    try {
+        await fetch('https://formspree.io/f/xjgjvjkj', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+        });
+    } catch(e) {
+        console.error(e);
+    }
+
+    document.getElementById('feedback-thanks').style.display = 'block';
+    document.getElementById('feedback-submit').style.display = 'none';
+
+    setTimeout(() => {
+        toggleFeedback();
+        document.getElementById('feedback-msg').value = '';
+        document.getElementById('feedback-thanks').style.display = 'none';
+        document.getElementById('feedback-submit').style.display = 'block';
+        selectedRating = 0;
+        document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+    }, 2000);
+}
+</script>
+
+</body>
+</html>

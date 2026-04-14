@@ -233,6 +233,7 @@
         {% endwith %}
 
         <form method="POST" action="{{ url_for('login') }}" onsubmit="return validateEmail()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <div class="field">
                 <label for="email">{{ t("email") }}</label>
                 <div class="input-wrap">

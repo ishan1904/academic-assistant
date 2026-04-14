@@ -349,6 +349,19 @@
                 border-bottom: none;
             }
         }
+
+        @media (max-width: 480px) {
+            .hero-title { font-size: 1.8rem; }
+            .hero { padding: 40px 16px 32px; }
+            .topbar-logo .logo-text { display: none; }
+            .features-grid { grid-template-columns: 1fr; }
+            .cta-box { padding: 28px 16px; }
+            .cta-box h2 { font-size: 1.4rem; }
+            .trust-strip { grid-template-columns: 1fr; }
+            .btn { width: 100%; text-align: center; justify-content: center; }
+            .topbar-right { gap: 6px; }
+            .topbar-right .btn-ghost span { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -473,31 +486,163 @@
     </div>
 </section>
 
-<section id="privacy-section" class="cta-section" style="margin-top: 40px;">
-    <div class="cta-box">
-        <h2>Privacy Policy</h2>
-        <p>
-            Uploaded files are processed for academic assistance features such as grading,
-            syllabus enhancement, research summaries, and question generation. User accounts
-            are protected with hashed passwords, and the application uses third-party AI
-            providers only for processing requested tasks.
-        </p>
-    </div>
-</section>
 
-<footer>
-    <a href="{{ url_for('home') }}" style="color:var(--text-muted); text-decoration:none;">
-        {{ t("app_title") }}
-    </a>
-    &nbsp;·&nbsp;
-    <a href="#privacy-section" style="color:var(--text-muted); text-decoration:none;">
-        {{ t("privacy_policy") }}
-    </a>
-    &nbsp;·&nbsp;
-    <a href="{{ url_for('login') }}" style="color:var(--accent); text-decoration:none;">
-        {{ t("login") }}
-    </a>
+<footer class="site-footer" style="position:relative; z-index:1; text-align:center; padding:2rem 1rem; border-top:1px solid rgba(255,255,255,0.07); margin-top:3rem;">
+    <div style="display:flex; justify-content:center; gap:1.5rem; flex-wrap:wrap; margin-bottom:0.75rem;">
+        <a href="{{ url_for('about') }}" style="color:#5a7290; text-decoration:none; font-size:0.85rem;">About</a>
+        <a href="{{ url_for('contact') }}" style="color:#5a7290; text-decoration:none; font-size:0.85rem;">Contact</a>
+        <a href="{{ url_for('privacy') }}" style="color:#5a7290; text-decoration:none; font-size:0.85rem;">Privacy Policy</a>
+        <a href="{{ url_for('terms') }}" style="color:#5a7290; text-decoration:none; font-size:0.85rem;">Terms of Service</a>
+    </div>
+    <p style="color:#5a7290; font-size:0.8rem; margin:0;">© 2025 AI Academic Assistant. All rights reserved.</p>
 </footer>
+
+<!-- FEEDBACK WIDGET -->
+<div id="feedback-btn" onclick="toggleFeedback()" title="Give feedback">
+    <i class="fas fa-comment-dots"></i>
+    <span>Feedback</span>
+</div>
+
+<div id="feedback-popup">
+    <div id="feedback-header">
+        <span>Quick Feedback</span>
+        <button onclick="toggleFeedback()" id="feedback-close">✕</button>
+    </div>
+    <div id="star-row">
+        <span class="star" data-val="1">★</span>
+        <span class="star" data-val="2">★</span>
+        <span class="star" data-val="3">★</span>
+        <span class="star" data-val="4">★</span>
+        <span class="star" data-val="5">★</span>
+    </div>
+    <textarea id="feedback-msg" placeholder="Tell us what you think…" rows="3"></textarea>
+    <button id="feedback-submit" onclick="submitFeedback()">Send Feedback</button>
+    <p id="feedback-thanks" style="display:none;">✅ Thanks for your feedback!</p>
+</div>
+
+<style>
+#feedback-btn {
+    position: fixed;
+    bottom: 28px;
+    right: 28px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border-glow);
+    border-radius: 50px;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    font-family: var(--font-body);
+    transition: var(--transition);
+    box-shadow: 0 4px 20px rgba(84,180,255,0.15);
+}
+#feedback-btn:hover { background: rgba(84,180,255,0.2); border-color: var(--accent); }
+#feedback-popup {
+    display: none;
+    position: fixed;
+    bottom: 80px;
+    right: 28px;
+    z-index: 9999;
+    width: 300px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+    box-shadow: var(--shadow);
+}
+#feedback-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    font-weight: 600;
+    font-size: 0.95rem;
+    color: var(--text-primary);
+}
+#feedback-close { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 1rem; padding: 0; }
+#star-row { display: flex; gap: 6px; margin-bottom: 0.85rem; }
+.star { font-size: 1.6rem; color: var(--text-muted); cursor: pointer; transition: var(--transition); user-select: none; }
+.star.active, .star:hover { color: var(--amber); }
+#feedback-msg {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.88rem;
+    font-family: var(--font-body);
+    resize: none;
+    box-sizing: border-box;
+    outline: none;
+    margin-bottom: 0.85rem;
+    transition: var(--transition);
+}
+#feedback-msg:focus { border-color: var(--accent); background: var(--bg-card2); }
+#feedback-submit {
+    width: 100%;
+    padding: 0.6rem;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition);
+}
+#feedback-submit:hover { background: rgba(84,180,255,0.2); border-color: var(--accent); }
+#feedback-thanks { text-align: center; color: var(--green); font-size: 0.88rem; margin-top: 0.5rem; }
+</style>
+
+<script>
+let selectedRating = 0;
+function toggleFeedback() {
+    const popup = document.getElementById('feedback-popup');
+    popup.style.display = popup.style.display === 'block' ? 'none' : 'block';
+}
+document.querySelectorAll('.star').forEach(star => {
+    star.addEventListener('click', () => {
+        selectedRating = parseInt(star.dataset.val);
+        document.querySelectorAll('.star').forEach(s => {
+            s.classList.toggle('active', parseInt(s.dataset.val) <= selectedRating);
+        });
+    });
+});
+async function submitFeedback() {
+    const message = document.getElementById('feedback-msg').value.trim();
+    if (!message && selectedRating === 0) return;
+    const formData = new FormData();
+    formData.append('rating', selectedRating + ' / 5 stars');
+    formData.append('message', message);
+    formData.append('page', window.location.pathname);
+    formData.append('_cc', 'elizabeth.diaz@uta.edu');
+    formData.append('_subject', 'Feedback — AI Academic Assistant');
+    try {
+        await fetch('https://formspree.io/f/xjgjvjkj', {
+            method: 'POST',
+            body: formData,
+            headers: { 'Accept': 'application/json' }
+        });
+    } catch(e) { console.error(e); }
+    document.getElementById('feedback-thanks').style.display = 'block';
+    document.getElementById('feedback-submit').style.display = 'none';
+    setTimeout(() => {
+        toggleFeedback();
+        document.getElementById('feedback-msg').value = '';
+        document.getElementById('feedback-thanks').style.display = 'none';
+        document.getElementById('feedback-submit').style.display = 'block';
+        selectedRating = 0;
+        document.querySelectorAll('.star').forEach(s => s.classList.remove('active'));
+    }, 2000);
+}
+</script>
 
 </body>
 </html>

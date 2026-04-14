@@ -6,6 +6,8 @@ SQLITE_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "mcp_docstor
 
 _ENGINE = None
 
+CACHE_TTL_SECONDS = 60 * 60 * 24 * 30  # 30 days
+
 def _db_url() -> str:
     url = os.getenv("MCP_DATABASE_URL") or os.getenv("DATABASE_URL")
 
@@ -61,10 +63,14 @@ def get_cached(key_doc_id, student_doc_id, qid, strictness, provider):
     ck = _key(key_doc_id, student_doc_id, qid, strictness, provider)
     with _engine().connect() as con:
         row = con.execute(
-            text("SELECT value_json FROM grade_cache WHERE cache_key=:ck"),
+            text("SELECT value_json, created_at FROM grade_cache WHERE cache_key=:ck"),
             {"ck": ck},
         ).fetchone()
-        return json.loads(row[0]) if row else None
+        if not row:
+            return None
+        if time.time() - float(row[1]) > CACHE_TTL_SECONDS:
+            return None
+        return json.loads(row[0])
 
 def set_cached(key_doc_id, student_doc_id, qid, strictness, provider, value: dict):
     ck = _key(key_doc_id, student_doc_id, qid, strictness, provider)

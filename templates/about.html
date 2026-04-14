@@ -1,0 +1,179 @@
+{% extends "base.html" %}
+{% block title %}About — AI Academic Assistant{% endblock %}
+
+{% block extra_styles %}
+.about-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 1.25rem;
+    margin: 2rem 0;
+}
+
+.about-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    transition: var(--transition);
+}
+
+.about-card:hover {
+    border-color: var(--border-glow);
+    background: var(--bg-card2);
+}
+
+.about-icon {
+    font-size: 1.6rem;
+    margin-bottom: 0.75rem;
+}
+
+.about-card h2 {
+    border-bottom: none;
+    margin: 0 0 0.6rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.about-card p {
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.feature-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    margin-top: 1rem;
+}
+
+.feature-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.85rem;
+    padding: 0.7rem 1rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    transition: var(--transition);
+}
+
+.feature-row:hover {
+    border-color: var(--border-glow);
+    background: var(--bg-card2);
+}
+
+.feature-tag {
+    background: var(--accent-dim);
+    color: var(--accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+    padding: 2px 10px;
+    border-radius: 50px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 1px;
+    border: 1px solid var(--border-glow);
+}
+
+.feature-row span {
+    color: var(--text-secondary);
+    line-height: 1.6;
+}
+
+.about-cta {
+    text-align: center;
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--border);
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+{% endblock %}
+
+{% block content %}
+<h1>About AI Academic Assistant</h1>
+<p class="page-meta">AI-powered tools for educators and students</p>
+
+<div class="about-grid">
+
+    <div class="about-card">
+        <div class="about-icon">🎯</div>
+        <h2>Our mission</h2>
+        <p>We built AI Academic Assistant to reduce the time educators spend on repetitive tasks —
+            grading, question generation, exam preparation — so they can focus on what matters: teaching.</p>
+        <p>For students, our tools support active learning by extracting key concepts, generating
+            practice questions, and building research briefs from course materials.</p>
+    </div>
+
+    <div class="about-card">
+        <div class="about-icon">🛠️</div>
+        <h2>How it works</h2>
+        <p>The Platform uses a multi-provider AI architecture. Grading is powered by Groq's LLaMA 3.1
+            (fast and cost-efficient), with fallback to OpenAI and Anthropic Claude. OCR for scanned
+            documents uses Google Gemini. All results are cached so repeated requests are instant.</p>
+        <p>Built with Python (Flask), PostgreSQL, and SQLAlchemy — deployed on Railway.</p>
+    </div>
+
+    <div class="about-card">
+        <div class="about-icon">🔒</div>
+        <h2>Privacy and safety</h2>
+        <p>We don't sell your data. Uploaded files are deleted after processing. Grading results are
+            cached using a cryptographic hash of the content — not tied to your identity.</p>
+        <p>Passwords are hashed with bcrypt. Sessions use HttpOnly, SameSite cookies.
+            Read our full <a href="{{ url_for('privacy') }}">Privacy Policy</a>.</p>
+    </div>
+
+    <div class="about-card">
+        <div class="about-icon">⚠️</div>
+        <h2>AI limitations</h2>
+        <p>AI-generated content — grading feedback, questions, research briefs — should always be
+            reviewed by a qualified human. Language models can make mistakes, hallucinate references,
+            or misinterpret context.</p>
+        <p>This platform is a productivity tool, not a replacement for professional academic judgment.</p>
+    </div>
+
+</div>
+
+<h2>What you can do</h2>
+
+<div class="feature-grid">
+    <div class="feature-row">
+        <span class="feature-tag">Grading</span>
+        <span>Auto-grade student submissions against an answer key. Supports MCQ, short-answer, and long-answer with configurable strictness.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Questions</span>
+        <span>Generate MCQ, True/False, and open-ended questions from uploaded PDFs or slides.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Concepts</span>
+        <span>Extract core concepts and definitions from chapter documents for quick revision.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Exam papers</span>
+        <span>Generate multiple unique exam papers from lecture slides with configurable question counts.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Research</span>
+        <span>Produce structured research briefs with executive summary, key findings, data, and sources.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Letters</span>
+        <span>Generate professional recommendation letters from uploaded resumes.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Citations</span>
+        <span>Format citations in APA, MLA, Chicago, IEEE, and Harvard styles.</span>
+    </div>
+    <div class="feature-row">
+        <span class="feature-tag">Syllabus</span>
+        <span>Analyse course syllabi and receive structured improvement suggestions.</span>
+    </div>
+</div>
+
+<div class="about-cta">
+    Questions or feedback? <a href="{{ url_for('contact') }}">Get in touch →</a>
+</div>
+{% endblock %}

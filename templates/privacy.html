@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block title %}Privacy Policy — AI Academic Assistant{% endblock %}
+
+{% block content %}
+<h1>Privacy Policy</h1>
+<p class="page-meta">Effective date: January 1, 2025</p>
+
+<h2>1. Overview</h2>
+<p>
+    AI Academic Assistant ("the Platform", "we", "us") is an educational tool that uses artificial intelligence
+    to support students and educators. This Privacy Policy explains what data we collect, how we use it,
+    and your rights regarding that data. We take privacy seriously — particularly because educational records
+    are protected under <strong style="color:var(--text-primary)">FERPA (Family Educational Rights and Privacy Act)</strong>
+    and, where applicable, <strong style="color:var(--text-primary)">GDPR (General Data Protection Regulation)</strong>.
+</p>
+
+<h2>2. What data we collect</h2>
+<h3>Account data</h3>
+<p>When you sign up, we store your username, email address, and a bcrypt-hashed password.
+    We never store your password in plain text.</p>
+
+<h3>Uploaded documents</h3>
+<p>Files you upload (PDFs, PPTX, DOCX, TXT) are processed to extract text for AI analysis.
+    Uploaded files are stored temporarily during processing and are deleted automatically
+    after your request completes. Extracted text may be cached (see Section 3) to reduce repeated AI costs.</p>
+
+<h3>AI-generated content</h3>
+<p>Prompts sent to third-party AI providers (OpenAI, Anthropic, Groq, Google Gemini) include extracted
+    text from your uploads. These providers have their own privacy policies which govern how they handle
+    data in transit. We do not sell your data to these providers for training purposes.</p>
+
+<h3>Usage data</h3>
+<p>We may log request metadata (timestamps, feature used, file size) for debugging and reliability
+    purposes. These logs do not contain document content.</p>
+
+<h2>3. Caching and data retention</h2>
+<p>To reduce costs and improve speed, AI grading results and generated content are cached in our
+    database using a cryptographic hash of the input content. This means:</p>
+<ul>
+    <li>The same document processed twice will return the cached result.</li>
+    <li>Cached results do not contain your personal identity — only a hash of the content.</li>
+    <li>Cache entries expire after 30 days and are then cleared automatically.</li>
+</ul>
+<p>If you need cached results removed sooner, contact us at the address in Section 8.</p>
+
+<h2>4. Third-party AI providers</h2>
+<p>Depending on the feature used, your document content may be sent to one or more of these providers:</p>
+<ul>
+    <li><strong style="color:var(--text-primary)">OpenAI</strong> — gpt-4o-mini (question generation, syllabus analysis, exam papers)</li>
+    <li><strong style="color:var(--text-primary)">Anthropic (Claude)</strong> — available as an alternative grading engine</li>
+    <li><strong style="color:var(--text-primary)">Groq (LLaMA 3.1)</strong> — primary grading engine (fast, low-cost)</li>
+    <li><strong style="color:var(--text-primary)">Google Gemini</strong> — OCR fallback for scanned PDFs</li>
+</ul>
+<p>Each provider's data handling is governed by their respective privacy policies. We recommend
+    reviewing these if you handle sensitive student records.</p>
+
+<h2>5. FERPA considerations</h2>
+<p>If you are an educator using this platform to grade student submissions, please be aware:</p>
+<ul>
+    <li>Student answer papers may constitute educational records under FERPA.</li>
+    <li>You should obtain appropriate institutional consent before uploading identifiable student work.</li>
+    <li>We recommend anonymising student submissions (remove names, student IDs) before uploading.</li>
+    <li>Graded JSON output files are available for download and are your responsibility to manage.</li>
+</ul>
+
+<h2>6. Cookies and sessions</h2>
+<p>We use a single session cookie to maintain your login state. This cookie is:</p>
+<ul>
+    <li><strong style="color:var(--text-primary)">HttpOnly</strong> — not accessible to JavaScript</li>
+    <li><strong style="color:var(--text-primary)">SameSite=Lax</strong> — protects against cross-site request forgery</li>
+    <li>Set to expire after 1 hour of inactivity</li>
+    <li>Marked <strong style="color:var(--text-primary)">Secure</strong> in production (HTTPS only)</li>
+</ul>
+<p>We do not use advertising cookies, tracking pixels, or third-party analytics.</p>
+
+<h2>7. Your rights</h2>
+<p>You have the right to:</p>
+<ul>
+    <li><strong style="color:var(--text-primary)">Access</strong> — request a copy of data we hold about you</li>
+    <li><strong style="color:var(--text-primary)">Deletion</strong> — request deletion of your account and associated data</li>
+    <li><strong style="color:var(--text-primary)">Correction</strong> — update your username or email via account settings</li>
+    <li><strong style="color:var(--text-primary)">Portability</strong> — receive your data in a machine-readable format</li>
+    <li><strong style="color:var(--text-primary)">Object</strong> — opt out of any processing beyond essential service delivery</li>
+</ul>
+
+<h2>8. Contact</h2>
+<p>For privacy-related requests or questions, please contact us at:<br>
+    <a href="mailto:elizabeth.diaz@uta.edu">elizabeth.diaz@uta.edu</a>
+</p>
+<p>We will respond within 30 days.</p>
+
+<h2>9. Changes to this policy</h2>
+<p>We may update this Privacy Policy from time to time. When we do, we will update the effective date
+    at the top of this page. Continued use of the platform after changes constitutes acceptance of the
+    revised policy.</p>
+{% endblock %}

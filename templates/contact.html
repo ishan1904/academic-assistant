@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% block title %}Contact & Feedback — AI Academic Assistant{% endblock %}
+
+{% block extra_styles %}
+.contact-grid {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    gap: 2rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 680px) {
+    .contact-grid { grid-template-columns: 1fr; }
+}
+
+.contact-form-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.75rem;
+}
+
+.contact-form-card h2 {
+    border-bottom: none;
+    margin: 0 0 1.25rem;
+    font-size: 1rem;
+    color: var(--text-primary);
+}
+
+.form-group {
+    margin-bottom: 1.1rem;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.9rem;
+    font-family: var(--font-body);
+    box-sizing: border-box;
+    transition: var(--transition);
+    outline: none;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    border-color: var(--accent);
+    background: var(--bg-card2);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.form-group select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.form-group textarea {
+    resize: vertical;
+}
+
+.submit-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0.65rem 1.5rem;
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border-glow);
+    border-radius: var(--radius);
+    font-size: 0.9rem;
+    font-weight: 500;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition);
+}
+
+.submit-btn:hover {
+    background: rgba(84,180,255,0.2);
+    border-color: var(--accent);
+}
+
+.info-cards {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.info-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem;
+}
+
+.info-card h3 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin: 0 0 0.6rem;
+}
+
+.info-card p {
+    font-size: 0.85rem;
+    margin-bottom: 0.35rem;
+}
+
+.info-card ul {
+    padding-left: 1.1rem;
+    margin: 0;
+}
+
+.info-card ul li {
+    font-size: 0.85rem;
+    margin-bottom: 0.3rem;
+}
+{% endblock %}
+
+{% block content %}
+<h1>Contact &amp; Feedback</h1>
+<p class="page-meta">We'd love to hear from you — bug reports, feature requests, or general questions.</p>
+
+<div class="contact-grid">
+
+    <!-- Form -->
+    <div class="contact-form-card">
+        <h2>Send us a message</h2>
+        <form method="POST" action="https://formspree.io/f/your-form-id" id="contact-form">
+            <input type="hidden" name="_cc" value="elizabeth.diaz@uta.edu">
+            <div class="form-group">
+                <label for="name">Name</label>
+                <input type="text" id="name" name="name" placeholder="Your name" required maxlength="100">
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" placeholder="your@email.com" required maxlength="200">
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category</label>
+                <select id="category" name="category">
+                    <option value="general">General enquiry</option>
+                    <option value="bug">Bug report</option>
+                    <option value="feature">Feature request</option>
+                    <option value="grading">Grading issue</option>
+                    <option value="privacy">Privacy / data concern</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="message">Message</label>
+                <textarea id="message" name="message" rows="5"
+                    placeholder="Describe your issue or suggestion…" required maxlength="2000"></textarea>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                <i class="fas fa-paper-plane"></i> Send message
+            </button>
+        </form>
+    </div>
+
+    <!-- Info panel -->
+    <div class="info-cards">
+
+        <div class="info-card">
+            <h3>📧 Email</h3>
+            <p>General: <a href="mailto:elizabeth.diaz@uta.edu">elizabeth.diaz@uta.edu</a></p>
+            <p>Support: <a href="mailto:ishandrajvi@gmail.com">ishandrajvi@gmail.com</a></p>
+        </div>
+
+        <div class="info-card">
+            <h3>⏱ Response time</h3>
+            <p>We aim to respond to all messages within <strong style="color:var(--text-primary)">2 business days</strong>.</p>
+            <p>For urgent issues email privacy@ directly for a faster response.</p>
+        </div>
+
+        <div class="info-card">
+            <h3>📋 Useful links</h3>
+            <ul>
+                <li><a href="{{ url_for('privacy') }}">Privacy Policy</a></li>
+                <li><a href="{{ url_for('terms') }}">Terms of Service</a></li>
+                <li><a href="{{ url_for('about') }}">About the platform</a></li>
+            </ul>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

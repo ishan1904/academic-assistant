@@ -76,7 +76,9 @@ from flask_bcrypt import Bcrypt
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.serving import WSGIRequestHandler
 from werkzeug.utils import secure_filename
-
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+from flask_wtf.csrf import CSRFProtect
 from PyPDF2 import PdfReader
 
 # OCR helper (Gemini)
@@ -100,6 +102,12 @@ socket.setdefaulttimeout(180)  # global network timeout (seconds)
 
 app = Flask(__name__)
 WSGIRequestHandler.protocol_version = "HTTP/1.1"
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://",
+)
 
 
 # ===============================
@@ -123,8 +131,10 @@ def inject_i18n():
 
 
 # Flask session + basic security settings
-app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY", "fallback_secret")
-app.config["SESSION_COOKIE_SECURE"] = False  # set True behind HTTPS in production
+app.config["SECRET_KEY"] = os.getenv("FLASK_SECRET_KEY")
+app.config["WTF_CSRF_ENABLED"] = True
+IS_PRODUCTION = os.getenv("FLASK_ENV") == "production"
+app.config["SESSION_COOKIE_SECURE"] = IS_PRODUCTION
 app.config["SESSION_COOKIE_HTTPONLY"] = True
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["PERMANENT_SESSION_LIFETIME"] = timedelta(hours=1)
@@ -171,6 +181,7 @@ app.config["SQLALCHEMY_DATABASE_URI"] = DATABASE_URL or "sqlite:///users.db"
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+csrf = CSRFProtect(app)
 
 
 class User(db.Model):
@@ -1313,6 +1324,7 @@ def signup():
 
 
 @app.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
 def login():
     if request.method == "POST":
         email = (request.form.get("email") or "").strip()
@@ -1342,17 +1354,31 @@ def logout():
     return redirect(url_for("home"))
 
 
-@app.route("/debug_session")
-def debug_session():
-    """Small debug endpoint to confirm session values."""
-    return jsonify({k: session.get(k) for k in ("user_id", "username")})
-
 @app.route("/set_lang/<lang>")
 def set_lang(lang):
     if lang not in SUPPORTED_LANGS:
         lang = "en"
     session["lang"] = lang
     return redirect(request.referrer or url_for("dashboard"))
+
+@app.route("/about")
+def about():
+    return render_template("about.html")
+
+
+@app.route("/privacy")
+def privacy():
+    return render_template("privacy.html")
+
+
+@app.route("/terms")
+def terms():
+    return render_template("terms.html")
+
+
+@app.route("/contact")
+def contact():
+    return render_template("contact.html")
 
 
 # -----------------------------------------------------------------------------
@@ -1924,5 +1950,4 @@ def download_exam_papers(exam_filename: str):
 # Local dev entrypoint
 # -----------------------------------------------------------------------------
 if __name__ == "__main__":
-    # In production, prefer: gunicorn -w 2 -b 0.0.0.0:5000 app:app
-    app.run(debug=True)
+    app.run(debug=False)

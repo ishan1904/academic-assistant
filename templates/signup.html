@@ -112,6 +112,7 @@
             {% endif %}
         {% endwith %}
         <form method="POST" action="{{ url_for('signup') }}" onsubmit="return validateEmail()">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <label for="username">{{ t("username") }}:</label>
             <input type="text" id="username" name="username" placeholder="{{ t('enter_username') }}" required>
 
