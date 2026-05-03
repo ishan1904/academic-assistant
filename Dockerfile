@@ -50,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
 # Uses $PORT env var (Railway/AWS/Azure set this automatically)
 # Falls back to 5000 for local Docker runs
 # ─────────────────────────────────────────────
-CMD gunicorn app:app -b 0.0.0.0:${PORT:-8080} --workers 2 --timeout 180
+CMD ["sh", "-c", "gunicorn -w 2 -b 0.0.0.0:$PORT --timeout 120 --keep-alive 5 app:app"]
