@@ -347,10 +347,10 @@
         </div>
 
         {% if session.username %}
-        <div class="user-chip">
+        <a href="{{ url_for('profile') }}" class="user-chip" style="text-decoration:none; cursor:pointer;" title="My Profile">
             <div class="user-avatar">{{ session.username[0]|upper }}</div>
             <span class="user-name">{{ session.username }}</span>
-        </div>
+        </a>
         <a href="{{ url_for('logout') }}" class="btn-ghost btn-danger">
             <i class="fas fa-sign-out-alt"></i> {{ t("logout") }}
         </a>

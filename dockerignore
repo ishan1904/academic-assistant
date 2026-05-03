@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+env/
+uta_env/
+.venv/
+ENV/
+
+# Environment files — NEVER include in Docker image
+.env
+*.env
+.env.local
+.env.production
+
+# Database files — use PostgreSQL in production
+*.db
+*.sqlite
+*.sqlite3
+data/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Uploads — these are temporary files
+uploads/
+
+# Test files
+tests/
+test_*.py
+*_test.py
+
+# Documentation (not needed in container)
+*.md
+*.docx
+*.xlsx
+docs/

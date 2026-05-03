@@ -1,0 +1,388 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard — AI Academic Assistant{% endblock %}
+
+{% block extra_styles %}
+.admin-section {
+    margin-bottom: 2.5rem;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 1.25rem 1.5rem;
+    text-align: center;
+    transition: var(--transition);
+}
+
+.stat-card:hover {
+    border-color: var(--border-glow);
+    background: var(--bg-card2);
+}
+
+.stat-number {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--accent);
+    font-family: var(--font-mono);
+    line-height: 1;
+    margin-bottom: 0.4rem;
+}
+
+.stat-number.green { color: var(--green); }
+.stat-number.amber { color: var(--amber); }
+
+.stat-label {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.data-card {
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.data-card-header {
+    padding: 0.85rem 1.25rem;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.data-table th {
+    text-align: left;
+    padding: 0.7rem 1rem;
+    background: var(--bg-card);
+    color: var(--text-muted);
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+    text-transform: uppercase;
+}
+
+.data-table td {
+    padding: 0.7rem 1rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-secondary);
+    vertical-align: middle;
+}
+
+.data-table tr:last-child td {
+    border-bottom: none;
+}
+
+.data-table tr:hover td {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 50px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    font-family: var(--font-mono);
+}
+
+.badge-success {
+    background: rgba(74,222,128,0.1);
+    color: var(--green);
+    border: 1px solid rgba(74,222,128,0.2);
+}
+
+.badge-failed {
+    background: rgba(248,113,113,0.1);
+    color: var(--red);
+    border: 1px solid rgba(248,113,113,0.2);
+}
+
+.badge-cached {
+    background: var(--accent-dim);
+    color: var(--accent);
+    border: 1px solid var(--border-glow);
+}
+
+.badge-feature {
+    background: rgba(167,139,250,0.1);
+    color: #a78bfa;
+    border: 1px solid rgba(167,139,250,0.2);
+}
+
+.two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.25rem;
+    margin-bottom: 2rem;
+}
+
+@media (max-width: 680px) {
+    .two-col { grid-template-columns: 1fr; }
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+
+.bar-row {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.6rem 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.bar-row:last-child { border-bottom: none; }
+
+.bar-label {
+    font-size: 0.82rem;
+    color: var(--text-secondary);
+    font-family: var(--font-mono);
+    width: 130px;
+    flex-shrink: 0;
+}
+
+.bar-track {
+    flex: 1;
+    background: var(--bg-card2);
+    border-radius: 50px;
+    height: 8px;
+    overflow: hidden;
+}
+
+.bar-fill {
+    height: 100%;
+    border-radius: 50px;
+    background: linear-gradient(90deg, var(--accent), #a78bfa);
+    transition: width 0.6s ease;
+}
+
+.bar-count {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    width: 30px;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.admin-note {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    margin-top: 0.5rem;
+}
+{% endblock %}
+
+{% block content %}
+<h1>Admin Dashboard</h1>
+<p class="page-meta">Restricted to ishanrajvi1930@gmail.com &nbsp;·&nbsp; Live data from Railway PostgreSQL</p>
+
+<!-- ── TOP STATS ── -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-number">{{ total_users }}</div>
+        <div class="stat-label">Total Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number green">{{ active_users }}</div>
+        <div class="stat-label">Active Users</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number">{{ total_sessions }}</div>
+        <div class="stat-label">Total Sessions</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number green">{{ success_sessions }}</div>
+        <div class="stat-label">Successful</div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-number amber">{{ cached_sessions }}</div>
+        <div class="stat-label">Cache Hits</div>
+    </div>
+    {% if total_sessions > 0 %}
+    <div class="stat-card">
+        <div class="stat-number amber">{{ ((cached_sessions / total_sessions) * 100) | int }}%</div>
+        <div class="stat-label">Cache Rate</div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- ── FEATURE & PROVIDER USAGE ── -->
+<div class="two-col">
+
+    <div class="data-card">
+        <div class="data-card-header">Feature Usage</div>
+        {% if feature_stats %}
+            {% set max_count = feature_stats[0][1] %}
+            {% for feature, count in feature_stats %}
+            <div class="bar-row">
+                <span class="bar-label">{{ feature }}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: {{ ((count / max_count) * 100) | int }}%"></div>
+                </div>
+                <span class="bar-count">{{ count }}</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bar-row"><span class="bar-label" style="color:var(--text-muted)">No data yet</span></div>
+        {% endif %}
+    </div>
+
+    <div class="data-card">
+        <div class="data-card-header">AI Provider Usage</div>
+        {% if provider_stats %}
+            {% set max_count = provider_stats[0][1] %}
+            {% for provider, count in provider_stats %}
+            <div class="bar-row">
+                <span class="bar-label">{{ provider or "unknown" }}</span>
+                <div class="bar-track">
+                    <div class="bar-fill" style="width: {{ ((count / max_count) * 100) | int }}%"></div>
+                </div>
+                <span class="bar-count">{{ count }}</span>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="bar-row"><span class="bar-label" style="color:var(--text-muted)">No data yet</span></div>
+        {% endif %}
+    </div>
+
+</div>
+
+<!-- ── UNIVERSITY USAGE ── -->
+{% if university_stats %}
+<div class="admin-section">
+    <h2>University Usage</h2>
+    <div class="data-card">
+        <div class="data-card-header">Sessions by University</div>
+        {% set max_count = university_stats[0][1] %}
+        {% for uni, count in university_stats %}
+        <div class="bar-row">
+            <span class="bar-label" style="width:200px">{{ uni }}</span>
+            <div class="bar-track">
+                <div class="bar-fill" style="width: {{ ((count / max_count) * 100) | int }}%"></div>
+            </div>
+            <span class="bar-count">{{ count }}</span>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- ── RECENT SESSIONS ── -->
+<div class="admin-section">
+    <h2>Recent Sessions</h2>
+    <div class="data-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Time</th>
+                    <th>User</th>
+                    <th>Feature</th>
+                    <th>Provider</th>
+                    <th>Status</th>
+                    <th>Cached</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if recent_sessions %}
+                    {% for s in recent_sessions %}
+                    <tr>
+                        <td style="font-family:var(--font-mono); font-size:0.78rem;">
+                            {{ s.created_at.strftime("%b %d %H:%M") if s.created_at else "—" }}
+                        </td>
+                        <td>{{ s.user.username if s.user else "—" }}</td>
+                        <td><span class="badge badge-feature">{{ s.feature }}</span></td>
+                        <td style="font-family:var(--font-mono); font-size:0.78rem;">{{ s.ai_provider or "—" }}</td>
+                        <td>
+                            <span class="badge badge-{{ s.status }}">{{ s.status }}</span>
+                        </td>
+                        <td>
+                            {% if s.was_cached %}
+                                <span class="badge badge-cached">cached</span>
+                            {% else %}
+                                <span style="color:var(--text-muted); font-size:0.78rem;">—</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="6" style="text-align:center; color:var(--text-muted); padding:2rem;">
+                            No sessions logged yet. Use a feature to start tracking.
+                        </td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ── ALL USERS ── -->
+<div class="admin-section">
+    <h2>All Users</h2>
+    <div class="data-card">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Role</th>
+                    <th>University</th>
+                    <th>Joined</th>
+                    <th>Last Login</th>
+                    <th>Active</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for user in all_users %}
+                <tr>
+                    <td style="font-family:var(--font-mono); font-size:0.78rem;">#{{ user.id }}</td>
+                    <td>{{ user.username }}</td>
+                    <td style="font-size:0.82rem;">{{ user.email }}</td>
+                    <td><span class="badge badge-feature">{{ user.role }}</span></td>
+                    <td style="font-size:0.82rem;">{{ user.university.name if user.university else "—" }}</td>
+                    <td style="font-family:var(--font-mono); font-size:0.78rem;">
+                        {{ user.created_at.strftime("%b %d %Y") if user.created_at else "—" }}
+                    </td>
+                    <td style="font-family:var(--font-mono); font-size:0.78rem;">
+                        {{ user.last_login.strftime("%b %d %H:%M") if user.last_login else "—" }}
+                    </td>
+                    <td>
+                        {% if user.is_active %}
+                            <span class="badge badge-success">yes</span>
+                        {% else %}
+                            <span class="badge badge-failed">no</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    <p class="admin-note">{{ total_users }} total users registered</p>
+</div>
+
+{% endblock %}

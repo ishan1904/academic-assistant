@@ -1,144 +1,230 @@
+{% extends "base.html" %}
+{% block title %}{{ t("signup_title") }}{% endblock %}
 
-<!DOCTYPE html>
-<html lang="{{ get_lang() }}">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ t("signup_title") }}</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(to right, #eef2f3, #8e9eab);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
+{% block extra_styles %}
+.auth-wrapper {
+    min-height: calc(100vh - 62px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 2rem 1rem;
+}
 
-        .container {
-            width: 90%;
-            max-width: 400px;
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-            padding: 20px;
-            text-align: center;
-        }
+.auth-card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 2.25rem 2rem;
+    box-shadow: var(--shadow);
+}
 
-        h2 {
-            margin-bottom: 20px;
-            color: #333;
-        }
+.auth-icon {
+    width: 48px;
+    height: 48px;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
+    margin-bottom: 1.25rem;
+}
 
-        label {
-            font-weight: bold;
-            margin-top: 10px;
-            display: block;
-            text-align: left;
-            color: #333;
-        }
+.auth-card h2 {
+    font-family: var(--font-display);
+    font-size: 1.7rem;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0 0 0.4rem;
+}
 
-        input[type="text"],
-        input[type="email"],
-        input[type="password"] {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            font-size: 14px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            box-sizing: border-box;
-        }
+.auth-card .subtitle {
+    color: var(--text-muted);
+    font-size: 0.88rem;
+    margin-bottom: 1.75rem;
+}
 
-        button {
-            width: 100%;
-            padding: 10px;
-            margin-top: 15px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 16px;
-        }
+.form-group {
+    margin-bottom: 1.1rem;
+}
 
-        button:hover {
-            background: #45a049;
-        }
+.form-group label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-bottom: 0.35rem;
+    font-family: var(--font-mono);
+    letter-spacing: 0.03em;
+}
 
-        .message {
-            margin: 10px 0;
-            padding: 10px;
-            border-radius: 4px;
-            text-align: center;
-        }
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 0.65rem 0.9rem;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text-primary);
+    font-size: 0.92rem;
+    font-family: var(--font-body);
+    box-sizing: border-box;
+    transition: var(--transition);
+    outline: none;
+}
 
-        .error {
-            background: #f8d7da;
-            color: #721c24;
-        }
+.form-group input:focus,
+.form-group select:focus {
+    border-color: var(--accent);
+    background: var(--bg-card2);
+    box-shadow: 0 0 0 3px var(--accent-dim);
+}
 
-        .success {
-            background: #d4edda;
-            color: #155724;
-        }
+.form-group select option {
+    background: var(--bg-card);
+    color: var(--text-primary);
+}
 
-        a {
-            color: #4CAF50;
-            text-decoration: none;
-        }
+.input-icon-wrap {
+    position: relative;
+}
 
-        a:hover {
-            text-decoration: underline;
-            color: #45a049;
-        }
+.input-icon-wrap i {
+    position: absolute;
+    left: 0.85rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    pointer-events: none;
+}
 
-        p {
-            margin-top: 15px;
-            color: #333;
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
+.input-icon-wrap input,
+.input-icon-wrap select {
+    padding-left: 2.25rem;
+}
+
+.submit-btn {
+    width: 100%;
+    padding: 0.75rem;
+    background: linear-gradient(135deg, var(--accent), #a78bfa);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    font-family: var(--font-body);
+    cursor: pointer;
+    transition: var(--transition);
+    margin-top: 0.5rem;
+    letter-spacing: 0.02em;
+}
+
+.submit-btn:hover {
+    opacity: 0.9;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 20px rgba(84,180,255,0.25);
+}
+
+.auth-footer {
+    text-align: center;
+    margin-top: 1.25rem;
+    font-size: 0.88rem;
+    color: var(--text-muted);
+}
+
+.auth-footer a {
+    color: var(--accent);
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.auth-footer a:hover {
+    text-decoration: underline;
+}
+
+.role-hint {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.3rem;
+    font-family: var(--font-mono);
+}
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrapper">
+    <div class="auth-card">
+        <div class="auth-icon">✨</div>
         <h2>{{ t("signup") }}</h2>
-        {% with messages = get_flashed_messages(with_categories=true) %}
-            {% if messages %}
-                {% for category, message in messages %}
-                    <div class="message {{ category }}">{{ message }}</div>
-                {% endfor %}
-            {% endif %}
-        {% endwith %}
+        <p class="subtitle">Create your account to access academic AI tools.</p>
+
         <form method="POST" action="{{ url_for('signup') }}" onsubmit="return validateEmail()">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
-            <label for="username">{{ t("username") }}:</label>
-            <input type="text" id="username" name="username" placeholder="{{ t('enter_username') }}" required>
 
-            <label for="email">{{ t("email") }}:</label>
-            <input type="text" id="email" name="email" placeholder="{{ t('enter_email') }}" required pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
+            <div class="form-group">
+                <label for="username">{{ t("username") }}</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-user"></i>
+                    <input type="text" id="username" name="username"
+                        placeholder="{{ t('enter_username') }}" required>
+                </div>
+            </div>
 
-            <label for="password">{{ t("password") }}:</label>
-            <input type="password" id="password" name="password" placeholder="{{ t('enter_password') }}" required>
+            <div class="form-group">
+                <label for="email">{{ t("email") }}</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-envelope"></i>
+                    <input type="text" id="email" name="email"
+                        placeholder="{{ t('enter_email') }}" required
+                        pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$">
+                </div>
+            </div>
 
-            <button type="submit">{{ t("sign_up_btn") }}</button>
+            <div class="form-group">
+                <label for="password">{{ t("password") }}</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" id="password" name="password"
+                        placeholder="{{ t('enter_password') }}" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="role">I am a</label>
+                <div class="input-icon-wrap">
+                    <i class="fas fa-graduation-cap"></i>
+                    <select id="role" name="role">
+                        <option value="student">Student</option>
+                        <option value="professor">Professor / Educator</option>
+                        <option value="researcher">Researcher</option>
+                        <option value="guest">Just exploring</option>
+                    </select>
+                </div>
+                <p class="role-hint">This helps us tailor your experience.</p>
+            </div>
+
+            <button type="submit" class="submit-btn">
+                <i class="fas fa-user-plus"></i> {{ t("sign_up_btn") }}
+            </button>
         </form>
-        <p>{{ t("have_account") }} <a href="{{ url_for('login') }}">{{ t("login") }}</a></p>
+
+        <div class="auth-footer">
+            {{ t("have_account") }} <a href="{{ url_for('login') }}">{{ t("login") }}</a>
+        </div>
     </div>
+</div>
 
-    <script>
-        function validateEmail() {
-            const emailInput = document.getElementById('email').value;
-            const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-
-            if (!emailRegex.test(emailInput)) {
-                alert("{{ t('invalid_email_alert') }}");
-                return false;
-            }
-
-            return true;
-        }
-    </script>
-</body>
-</html>
+<script>
+function validateEmail() {
+    const emailInput = document.getElementById('email').value;
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(emailInput)) {
+        alert("{{ t('invalid_email_alert') }}");
+        return false;
+    }
+    return true;
+}
+</script>
+{% endblock %}

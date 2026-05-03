@@ -184,18 +184,115 @@ bcrypt = Bcrypt(app)
 csrf = CSRFProtect(app)
 
 
+class University(db.Model):
+    __tablename__ = "university"
+
+    id          = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    name        = db.Column(db.String(200), unique=True, nullable=False)
+    country     = db.Column(db.String(100), nullable=True)
+    website     = db.Column(db.String(200), nullable=True)
+    is_active   = db.Column(db.Boolean, default=True, nullable=False)
+    created_at  = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def __repr__(self):
+        return f"<University {self.name}>"
+
+
 class User(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(80), unique=True, nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    password = db.Column(db.String(120), nullable=False)
+    __tablename__ = "user"
+
+    id              = db.Column(db.Integer, primary_key=True)
+    username        = db.Column(db.String(80), unique=True, nullable=False)
+    email           = db.Column(db.String(120), unique=True, nullable=False)
+    password        = db.Column(db.String(120), nullable=False)
+    role            = db.Column(db.String(20), default="student", nullable=False)
+    university_id   = db.Column(db.String(36), db.ForeignKey("university.id"), nullable=True)
+    department      = db.Column(db.String(200), nullable=True)
+    is_active       = db.Column(db.Boolean, default=True, nullable=False)
+    language_pref   = db.Column(db.String(10), default="en", nullable=False)
+    last_login      = db.Column(db.DateTime, nullable=True)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    university      = db.relationship("University", backref="users")
 
     def __repr__(self) -> str:
-        return f"<User {self.username}>"
+        return f"<User {self.username} ({self.role})>"
 
+class Document(db.Model):
+    __tablename__ = "document"
+
+    id              = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id         = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    filename        = db.Column(db.String(255), nullable=False)
+    original_name   = db.Column(db.String(255), nullable=False)
+    file_type       = db.Column(db.String(50), nullable=True)   # "pdf", "pptx", "docx", "txt"
+    file_size_kb    = db.Column(db.Integer, nullable=True)
+    page_count      = db.Column(db.Integer, nullable=True)
+    doc_role        = db.Column(db.String(50), nullable=True)   # "answer_key", "student_submission", "lecture", "resume"
+    extracted_text  = db.Column(db.Text, nullable=True)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user            = db.relationship("User", backref="documents")
+
+    def __repr__(self):
+        return f"<Document {self.original_name} ({self.file_type})>"
+    
+class Session(db.Model):
+    __tablename__ = "session_log"
+
+    id              = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id         = db.Column(db.Integer, db.ForeignKey("user.id"), nullable=False)
+    feature         = db.Column(db.String(100), nullable=False)  # "grading", "questions", "exam_papers", "concepts", "research", "recommendation", "citation", "syllabus"
+    document_id     = db.Column(db.String(36), db.ForeignKey("document.id"), nullable=True)
+    ai_provider     = db.Column(db.String(50), nullable=True)    # "groq", "openai", "anthropic", "gemini"
+    was_cached      = db.Column(db.Boolean, default=False, nullable=False)
+    status          = db.Column(db.String(20), default="success", nullable=False)  # "success", "failed", "partial"
+    duration_ms     = db.Column(db.Integer, nullable=True)       # how long the request took
+    error_message   = db.Column(db.Text, nullable=True)          # if status is "failed"
+    output_summary  = db.Column(db.Text, nullable=True)          # first 500 chars of output
+    university_id   = db.Column(db.String(36), db.ForeignKey("university.id"), nullable=True)
+    created_at      = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    user            = db.relationship("User", backref="sessions")
+    document        = db.relationship("Document", backref="sessions")
+    university      = db.relationship("University", backref="sessions")
+
+    def __repr__(self):
+        return f"<Session {self.feature} by user {self.user_id} ({self.status})>"
 
 with app.app_context():
     db.create_all()
+
+
+def log_session(feature, document_id=None, ai_provider=None,
+                was_cached=False, status="success",
+                duration_ms=None, error_message=None, output_summary=None):
+    """Call this after every AI feature to log usage."""
+    try:
+        user_id = session.get("user_id")
+        if not user_id:
+            return
+
+        # Get university from user
+        user = User.query.get(user_id)
+        university_id = user.university_id if user else None
+
+        log = Session(
+            user_id=user_id,
+            feature=feature,
+            document_id=document_id,
+            ai_provider=ai_provider,
+            was_cached=was_cached,
+            status=status,
+            duration_ms=duration_ms,
+            error_message=str(error_message)[:500] if error_message else None,
+            output_summary=str(output_summary)[:500] if output_summary else None,
+            university_id=university_id,
+        )
+        db.session.add(log)
+        db.session.commit()
+    except Exception as e:
+        print(f"[SESSION LOG ERROR] {e}")
 
 # -----------------------------------------------------------------------------
 # Template filters
@@ -221,6 +318,22 @@ def login_required(fn):
 
     return wrapper
 
+def admin_required(fn):
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if "user_id" not in session:
+            flash("Please log in.", "error")
+            return redirect(url_for("login"))
+        user = User.query.get(session["user_id"])
+        ADMIN_EMAILS = set(filter(None, [
+            os.getenv("ADMIN_EMAIL_1"),
+            os.getenv("ADMIN_EMAIL_2"),
+        ]))
+        if not user or user.email not in ADMIN_EMAILS:
+            flash("Access denied.", "error")
+            return redirect(url_for("dashboard"))
+        return fn(*args, **kwargs)
+    return wrapper
 
 def allowed_file(filename: str) -> bool:
     """Allow only known safe extensions."""
@@ -1312,14 +1425,20 @@ def signup():
             flash("Username or email already exists.", "error")
             return render_template("signup.html")
 
+        role = request.form.get("role", "student")
         hashed = bcrypt.generate_password_hash(password).decode("utf-8")
-        user = User(username=username, email=email, password=hashed)
+        user = User(username=username, email=email, password=hashed, role=role)
         db.session.add(user)
         db.session.commit()
 
-        flash("Signup successful! Please log in.", "success")
-        return redirect(url_for("login"))
+        # Log them in immediately and send to profile setup
+        session["user_id"] = user.id
+        session["username"] = user.username
+        session.permanent = True
 
+        flash("Account created! Please complete your profile.", "success")
+        return redirect(url_for("profile"))
+    
     return render_template("signup.html")
 
 
@@ -1342,10 +1461,92 @@ def login():
         session["user_id"] = user.id
         session["username"] = user.username
         session.permanent = True
+
+        user.last_login = datetime.utcnow()
+        db.session.commit()
+
         return redirect(url_for("dashboard"))
 
     return render_template("login.html")
 
+
+@app.route("/profile")
+@login_required
+def profile():
+    user = User.query.get(session["user_id"])
+    return render_template("profile.html", user=user)
+
+
+@app.route("/profile/update", methods=["POST"])
+@login_required
+def profile_update():
+    user = User.query.get(session["user_id"])
+    form_type = request.form.get("form_type")
+
+    if form_type == "academic":
+        university_name = (request.form.get("university") or "").strip()[:200]
+        department      = (request.form.get("department") or "").strip()[:200]
+        country         = (request.form.get("country") or "").strip()[:100]
+        role            = request.form.get("role", user.role)
+
+        if university_name:
+            uni = University.query.filter_by(name=university_name).first()
+            if not uni:
+                uni = University(
+                    id=str(uuid.uuid4()),
+                    name=university_name,
+                    country=country,
+                )
+                db.session.add(uni)
+                db.session.flush()
+            else:
+                uni.country = country
+            user.university_id = uni.id
+
+        user.department = department
+        user.role = role
+        db.session.commit()
+        flash("Academic information updated!", "success")
+
+    elif form_type == "email":
+        new_email        = (request.form.get("new_email") or "").strip()
+        confirm_password = (request.form.get("confirm_password") or "").strip()
+
+        if not bcrypt.check_password_hash(user.password, confirm_password):
+            flash("Incorrect password. Email not changed.", "error")
+            return redirect(url_for("profile"))
+
+        existing = User.query.filter_by(email=new_email).first()
+        if existing:
+            flash("That email is already in use.", "error")
+            return redirect(url_for("profile"))
+
+        user.email = new_email
+        db.session.commit()
+        flash("Email updated successfully!", "success")
+
+    elif form_type == "password":
+        current_password     = (request.form.get("current_password") or "").strip()
+        new_password         = (request.form.get("new_password") or "").strip()
+        confirm_new_password = (request.form.get("confirm_new_password") or "").strip()
+
+        if not bcrypt.check_password_hash(user.password, current_password):
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("profile"))
+
+        if new_password != confirm_new_password:
+            flash("New passwords do not match.", "error")
+            return redirect(url_for("profile"))
+
+        if len(new_password) < 8:
+            flash("Password must be at least 8 characters.", "error")
+            return redirect(url_for("profile"))
+
+        user.password = bcrypt.generate_password_hash(new_password).decode("utf-8")
+        db.session.commit()
+        flash("Password changed successfully!", "success")
+
+    return redirect(url_for("profile"))
 
 @app.route("/logout")
 def logout():
@@ -1359,6 +1560,13 @@ def set_lang(lang):
     if lang not in SUPPORTED_LANGS:
         lang = "en"
     session["lang"] = lang
+
+    if "user_id" in session:
+        user = User.query.get(session["user_id"])
+        if user:
+            user.language_pref = lang
+            db.session.commit()
+
     return redirect(request.referrer or url_for("dashboard"))
 
 @app.route("/about")
@@ -1384,6 +1592,60 @@ def contact():
 # -----------------------------------------------------------------------------
 # Routes: Grading (sync)
 # -----------------------------------------------------------------------------
+
+@app.route("/admin")
+@admin_required
+def admin_dashboard():
+    from sqlalchemy import func
+
+    # User stats
+    total_users     = User.query.count()
+    active_users    = User.query.filter_by(is_active=True).count()
+    all_users       = User.query.order_by(User.id.desc()).all()
+
+    # Session stats
+    total_sessions  = Session.query.count()
+    success_sessions = Session.query.filter_by(status="success").count()
+    cached_sessions = Session.query.filter_by(was_cached=True).count()
+
+    # Feature usage breakdown
+    feature_stats = db.session.query(
+        Session.feature,
+        func.count(Session.id).label("count")
+    ).group_by(Session.feature).order_by(func.count(Session.id).desc()).all()
+
+    # Provider usage breakdown
+    provider_stats = db.session.query(
+        Session.ai_provider,
+        func.count(Session.id).label("count")
+    ).group_by(Session.ai_provider).order_by(func.count(Session.id).desc()).all()
+
+    # Recent sessions
+    recent_sessions = Session.query.order_by(
+        Session.created_at.desc()
+    ).limit(20).all()
+
+    # University stats
+    university_stats = db.session.query(
+        University.name,
+        func.count(Session.id).label("count")
+    ).join(Session, Session.university_id == University.id)\
+     .group_by(University.name)\
+     .order_by(func.count(Session.id).desc()).all()
+
+    return render_template("admin.html",
+        total_users=total_users,
+        active_users=active_users,
+        all_users=all_users,
+        total_sessions=total_sessions,
+        success_sessions=success_sessions,
+        cached_sessions=cached_sessions,
+        feature_stats=feature_stats,
+        provider_stats=provider_stats,
+        recent_sessions=recent_sessions,
+        university_stats=university_stats,
+    )
+
 @app.route("/grade", methods=["GET"])
 @login_required
 def grade_form():
@@ -1462,12 +1724,26 @@ def grade_run():
             download_filename=out_name,
         )
 
+        log_session(
+            feature="grading",
+            ai_provider=grading_provider,
+            was_cached=False,
+            status="success",
+            output_summary=f"avg_score={avg_score} questions={len(results)}",
+        )
+
         resp = make_response(html_output)
         resp.headers["Content-Type"] = "text/html; charset=utf-8"
         return resp
 
     except Exception as e:
         print(f"[ERROR] grade_run failed: {e}\n{traceback.format_exc()}")
+        log_session(
+            feature="grading",
+            ai_provider=grading_provider if 'grading_provider' in dir() else "unknown",
+            status="failed",
+            error_message=str(e),
+        )
         return ajax_error("Grading failed. Check server logs.", 500) if is_ajax else redirect(url_for("dashboard"))
     finally:
         for p in (key_path, ans_path):
@@ -1612,6 +1888,7 @@ def grade_async():
     ).start()
 
     return jsonify({"task_id": task_id})
+
 
 
 @app.route("/status_json/<task_id>")
@@ -1793,6 +2070,15 @@ def upload_file():
             "action": action,
             "result": ai_response.get("data"),
         }
+
+        log_session(
+            feature="exam_papers",
+            ai_provider=ai_model,
+            was_cached=ai_response.get("cached", False),
+            status="success",
+            output_summary=str(ai_response.get("data", ""))[:500],
+        )
+
         if is_ajax:
             return jsonify(payload)
 
@@ -1835,8 +2121,27 @@ def upload_file():
             return redirect(url_for("dashboard"))
 
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{filename}")
+        file_uuid = uuid.uuid4().hex
+        filepath = os.path.join(app.config["UPLOAD_FOLDER"], f"{file_uuid}_{filename}")
         file.save(filepath)
+
+        # Save document metadata to database
+        try:
+            ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+            file_size_kb = os.path.getsize(filepath) // 1024
+            doc_record = Document(
+                id=str(uuid.uuid4()),
+                user_id=session.get("user_id"),
+                filename=f"{file_uuid}_{filename}",
+                original_name=filename,
+                file_type=ext,
+                file_size_kb=file_size_kb,
+                doc_role=action,
+            )
+            db.session.add(doc_record)
+            db.session.commit()
+        except Exception as e:
+            print(f"[DOC LOG ERROR] {e}")
 
         try:
             ext = filename.rsplit(".", 1)[1].lower()
@@ -1907,6 +2212,15 @@ def upload_file():
         "action": action,
         "result": ai_response.get("data")
     }
+
+    log_session(
+        feature=action,
+        ai_provider=ai_model,
+        was_cached=ai_response.get("cached", False),
+        status="success",
+        output_summary=str(ai_response.get("data", ""))[:500],
+    )
+
     if is_ajax:
         return jsonify(payload)
 

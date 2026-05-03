@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="{{ get_lang() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Profile — {{ t("app_title") }}</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <style>
+        :root {
+            --bg:           #0c0f14;
+            --bg-surface:   #131820;
+            --bg-card:      #1a2130;
+            --bg-card2:     #1f2a3d;
+            --border:       rgba(255,255,255,0.07);
+            --border-glow:  rgba(84,180,255,0.25);
+            --accent:       #54b4ff;
+            --accent2:      #7dd3fc;
+            --accent-dim:   rgba(84,180,255,0.12);
+            --green:        #4ade80;
+            --amber:        #fbbf24;
+            --red:          #f87171;
+            --text-primary: #f0f4ff;
+            --text-secondary:#8fa3bf;
+            --text-muted:   #5a7290;
+            --radius:       12px;
+            --radius-lg:    18px;
+            --shadow:       0 8px 32px rgba(0,0,0,0.4);
+            --font-body:    'DM Sans', sans-serif;
+            --font-display: 'DM Serif Display', serif;
+            --font-mono:    'JetBrains Mono', monospace;
+            --transition:   0.22s cubic-bezier(0.4,0,0.2,1);
+        }
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: var(--font-body); background: var(--bg); color: var(--text-primary); min-height: 100vh; }
+        body::before {
+            content: ''; position: fixed; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+            pointer-events: none; z-index: 0;
+        }
+        .topbar {
+            position: sticky; top: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 32px; height: 62px;
+            background: rgba(12,15,20,0.85); backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+        }
+        .topbar-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+        .logo-mark {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            border-radius: 8px; display: flex; align-items: center; justify-content: center;
+            font-size: 15px; font-weight: 700; color: #fff; font-family: var(--font-mono);
+        }
+        .logo-text { font-family: var(--font-display); font-size: 1.15rem; color: var(--text-primary); }
+        .topbar-right { display: flex; align-items: center; gap: 12px; }
+        .btn-ghost {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 14px; border: 1px solid var(--border);
+            border-radius: 8px; background: transparent;
+            color: var(--text-secondary); font-size: 0.82rem;
+            font-family: var(--font-body); cursor: pointer;
+            text-decoration: none; transition: var(--transition);
+        }
+        .btn-ghost:hover { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .btn-danger { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.3); color: var(--red); }
+        .btn-danger:hover { background: rgba(248,113,113,0.2); border-color: var(--red); color: var(--red); }
+        .page-wrap { position: relative; z-index: 1; max-width: 720px; margin: 0 auto; padding: 3rem 1.5rem 5rem; }
+        .page-title { font-family: var(--font-display); font-size: 2rem; margin-bottom: 0.4rem; }
+        .page-sub { color: var(--text-muted); font-size: 0.88rem; font-family: var(--font-mono); margin-bottom: 2.5rem; }
+        .avatar-row {
+            display: flex; align-items: center; gap: 1.25rem;
+            margin-bottom: 2rem; padding: 1.5rem;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+        }
+        .avatar-circle {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--accent), #a78bfa);
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-size: 1.6rem; font-weight: 700; color: #fff; flex-shrink: 0;
+            font-family: var(--font-mono);
+        }
+        .avatar-info h3 { font-size: 1.1rem; font-weight: 600; margin-bottom: 0.2rem; }
+        .avatar-info p { font-size: 0.82rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 2px; }
+        .role-badge {
+            margin-left: auto; padding: 4px 14px;
+            background: var(--accent-dim); color: var(--accent);
+            border: 1px solid var(--border-glow); border-radius: 50px;
+            font-size: 0.75rem; font-family: var(--font-mono); font-weight: 600;
+        }
+        .profile-section {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); margin-bottom: 1.5rem; overflow: hidden;
+        }
+        .section-header {
+            padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; gap: 0.75rem;
+        }
+        .section-header i { color: var(--accent); font-size: 0.9rem; }
+        .section-header h2 { font-size: 0.95rem; font-weight: 600; color: var(--text-primary); }
+        .section-body { padding: 1.5rem; }
+        .field { margin-bottom: 1.1rem; }
+        .field:last-of-type { margin-bottom: 0; }
+        .field label {
+            display: block; font-size: 0.8rem; font-weight: 500;
+            color: var(--text-secondary); margin-bottom: 7px;
+            font-family: var(--font-mono); letter-spacing: 0.03em;
+        }
+        .input-wrap { position: relative; }
+        .input-icon {
+            position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+            color: var(--text-muted); font-size: 0.85rem; pointer-events: none;
+        }
+        .field input, .field select {
+            width: 100%; padding: 10px 14px 10px 38px;
+            background: var(--bg-surface); border: 1px solid var(--border);
+            border-radius: var(--radius); color: var(--text-primary);
+            font-size: 0.9rem; font-family: var(--font-body);
+            transition: var(--transition); outline: none;
+        }
+        .field input::placeholder { color: var(--text-muted); }
+        .field input:focus, .field select:focus {
+            border-color: var(--accent); box-shadow: 0 0 0 3px rgba(84,180,255,0.1);
+            background: var(--bg-card2);
+        }
+        .field select option { background: var(--bg-card); }
+        .field-hint { font-size: 0.75rem; color: var(--text-muted); font-family: var(--font-mono); margin-top: 0.3rem; }
+        .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+        @media (max-width: 540px) { .two-col { grid-template-columns: 1fr; } }
+        .btn-save {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 9px 20px; background: var(--accent-dim); color: var(--accent);
+            border: 1px solid var(--border-glow); border-radius: var(--radius);
+            font-size: 0.88rem; font-weight: 500; font-family: var(--font-body);
+            cursor: pointer; transition: var(--transition); margin-top: 1.25rem;
+        }
+        .btn-save:hover { background: rgba(84,180,255,0.2); border-color: var(--accent); }
+        .btn-save-green { background: rgba(74,222,128,0.1); color: var(--green); border-color: rgba(74,222,128,0.3); }
+        .btn-save-green:hover { background: rgba(74,222,128,0.2); border-color: var(--green); }
+        .btn-save-red { background: rgba(248,113,113,0.1); color: var(--red); border-color: rgba(248,113,113,0.3); }
+        .btn-save-red:hover { background: rgba(248,113,113,0.2); border-color: var(--red); }
+        .flash-msg {
+            padding: 10px 14px; border-radius: var(--radius);
+            font-size: 0.85rem; margin-bottom: 1.25rem;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .flash-msg.success { background: rgba(74,222,128,0.08); border: 1px solid rgba(74,222,128,0.25); color: var(--green); }
+        .flash-msg.error { background: rgba(248,113,113,0.08); border: 1px solid rgba(248,113,113,0.25); color: var(--red); }
+        .incomplete-banner {
+            display: flex; align-items: flex-start; gap: 1rem;
+            padding: 1rem 1.5rem;
+            background: rgba(251,191,36,0.07); border: 1px solid rgba(251,191,36,0.25);
+            border-radius: var(--radius-lg); margin-bottom: 2rem;
+        }
+        .incomplete-banner i { color: var(--amber); font-size: 1.1rem; flex-shrink: 0; margin-top: 2px; }
+        .incomplete-banner p { font-size: 0.88rem; color: var(--text-secondary); line-height: 1.6; }
+        .incomplete-banner strong { color: var(--amber); }
+        @media (max-width: 480px) {
+            .topbar { padding: 0 16px; }
+            .logo-text { display: none; }
+            .page-wrap { padding: 2rem 1rem 4rem; }
+            .avatar-row { flex-wrap: wrap; }
+            .role-badge { margin-left: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <a class="topbar-logo" href="{{ url_for('home') }}">
+        <div class="logo-mark">Ac</div>
+        <span class="logo-text">{{ t("app_title") }}</span>
+    </a>
+    <div class="topbar-right">
+        <a href="{{ url_for('dashboard') }}" class="btn-ghost">
+            <i class="fas fa-arrow-left"></i> Dashboard
+        </a>
+        <a href="{{ url_for('logout') }}" class="btn-ghost btn-danger">
+            <i class="fas fa-sign-out-alt"></i> Logout
+        </a>
+    </div>
+</header>
+
+<div class="page-wrap">
+    <h1 class="page-title">My Profile</h1>
+    <p class="page-sub">Manage your account information and preferences</p>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="flash-msg {{ category }}">
+                    <i class="fas {% if category == 'error' %}fa-exclamation-circle{% else %}fa-check-circle{% endif %}"></i>
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    {% if not user.university_id %}
+    <div class="incomplete-banner">
+        <i class="fas fa-exclamation-triangle"></i>
+        <p><strong>Your profile is incomplete.</strong> Please fill in your university and department below — this helps personalise your experience and enables research tracking.</p>
+    </div>
+    {% endif %}
+
+    <!-- Avatar -->
+    <div class="avatar-row">
+        <div class="avatar-circle">{{ user.username[0]|upper }}</div>
+        <div class="avatar-info">
+            <h3>{{ user.username }}</h3>
+            <p>{{ user.email }}</p>
+            <p>Member since {{ user.created_at.strftime("%B %Y") if user.created_at else "—" }}
+               &nbsp;·&nbsp; Last login {{ user.last_login.strftime("%b %d, %Y") if user.last_login else "Never" }}</p>
+        </div>
+        <span class="role-badge">{{ user.role }}</span>
+    </div>
+
+    <!-- Academic Info -->
+    <div class="profile-section">
+        <div class="section-header">
+            <i class="fas fa-university"></i>
+            <h2>Academic Information</h2>
+        </div>
+        <div class="section-body">
+            <form method="POST" action="{{ url_for('profile_update') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="form_type" value="academic">
+                <div class="two-col">
+                    <div class="field">
+                        <label>University / Institution</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-university input-icon"></i>
+                            <input type="text" name="university"
+                                placeholder="e.g. University of Texas at Arlington"
+                                value="{{ user.university.name if user.university else '' }}">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Department</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-building input-icon"></i>
+                            <input type="text" name="department"
+                                placeholder="e.g. Computer Science"
+                                value="{{ user.department if user.department else '' }}">
+                        </div>
+                    </div>
+                </div>
+                <div class="two-col">
+                    <div class="field">
+                        <label>Country</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-globe input-icon"></i>
+                            <select name="country">
+                                <option value="">Select country</option>
+                                {% for c in ["United States","United Kingdom","Canada","Australia","India","Germany","France","Brazil","Mexico","China","Japan","South Korea","Singapore","UAE","Saudi Arabia","Pakistan","Nigeria","South Africa","Other"] %}
+                                <option value="{{ c }}" {% if user.university and user.university.country == c %}selected{% endif %}>{{ c }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Role</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-graduation-cap input-icon"></i>
+                            <select name="role">
+                                <option value="student"    {% if user.role == 'student' %}selected{% endif %}>Student</option>
+                                <option value="professor"  {% if user.role == 'professor' %}selected{% endif %}>Professor / Educator</option>
+                                <option value="researcher" {% if user.role == 'researcher' %}selected{% endif %}>Researcher</option>
+                                <option value="guest"      {% if user.role == 'guest' %}selected{% endif %}>Just exploring</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-save">
+                    <i class="fas fa-save"></i> Save academic info
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Email -->
+    <div class="profile-section">
+        <div class="section-header">
+            <i class="fas fa-envelope"></i>
+            <h2>Change Email</h2>
+        </div>
+        <div class="section-body">
+            <form method="POST" action="{{ url_for('profile_update') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="form_type" value="email">
+                <div class="field">
+                    <label>Current email</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="text" value="{{ user.email }}" disabled style="opacity:0.5; cursor:not-allowed;">
+                    </div>
+                </div>
+                <div class="field">
+                    <label>New email</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-envelope input-icon"></i>
+                        <input type="email" name="new_email" placeholder="Enter new email address" required>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>Confirm with your password</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" name="confirm_password" placeholder="Your current password" required>
+                    </div>
+                    <p class="field-hint">Required to verify your identity before changing email.</p>
+                </div>
+                <button type="submit" class="btn-save btn-save-green">
+                    <i class="fas fa-check"></i> Update email
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Change Password -->
+    <div class="profile-section">
+        <div class="section-header">
+            <i class="fas fa-lock"></i>
+            <h2>Change Password</h2>
+        </div>
+        <div class="section-body">
+            <form method="POST" action="{{ url_for('profile_update') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <input type="hidden" name="form_type" value="password">
+                <div class="field">
+                    <label>Current password</label>
+                    <div class="input-wrap">
+                        <i class="fas fa-lock input-icon"></i>
+                        <input type="password" name="current_password" placeholder="Enter current password" required>
+                    </div>
+                </div>
+                <div class="two-col">
+                    <div class="field">
+                        <label>New password</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-key input-icon"></i>
+                            <input type="password" name="new_password" placeholder="Min 8 characters" required minlength="8">
+                        </div>
+                    </div>
+                    <div class="field">
+                        <label>Confirm new password</label>
+                        <div class="input-wrap">
+                            <i class="fas fa-key input-icon"></i>
+                            <input type="password" name="confirm_new_password" placeholder="Repeat new password" required minlength="8">
+                        </div>
+                    </div>
+                </div>
+                <button type="submit" class="btn-save btn-save-red">
+                    <i class="fas fa-shield-alt"></i> Change password
+                </button>
+            </form>
+        </div>
+    </div>
+
+</div>
+</body>
+</html>
