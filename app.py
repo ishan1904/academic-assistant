@@ -1465,6 +1465,8 @@ def login():
         user.last_login = datetime.utcnow()
         db.session.commit()
 
+        session["profile_complete"] = user.university_id is not None
+
         return redirect(url_for("dashboard"))
 
     return render_template("login.html")
@@ -1507,6 +1509,7 @@ def profile_update():
         user.role = role
         db.session.commit()
         flash("Academic information updated!", "success")
+        session["profile_complete"] = user.university_id is not None
 
     elif form_type == "email":
         new_email        = (request.form.get("new_email") or "").strip()
@@ -1676,6 +1679,48 @@ def grade_run():
 
         force_ocr = "force_ocr" in request.form
         grading_provider = (request.form.get("grading_provider") or "groq").strip().lower()
+
+        # Save document metadata to database
+        try:
+            key_size_kb = os.path.getsize(key_path) // 1024
+            ans_size_kb = os.path.getsize(ans_path) // 1024
+
+            try:
+                key_page_count = len(PdfReader(key_path).pages)
+            except Exception:
+                key_page_count = None
+
+            try:
+                ans_page_count = len(PdfReader(ans_path).pages)
+            except Exception:
+                ans_page_count = None
+
+            key_doc_record = Document(
+                id=str(uuid.uuid4()),
+                user_id=session.get("user_id"),
+                filename=f"{task_id}_key.pdf",
+                original_name=secure_filename(key_pdf.filename),
+                file_type="pdf",
+                file_size_kb=key_size_kb,
+                page_count=key_page_count,
+                doc_role="answer_key",
+            )
+            ans_doc_record = Document(
+                id=str(uuid.uuid4()),
+                user_id=session.get("user_id"),
+                filename=f"{task_id}_ans.pdf",
+                original_name=secure_filename(ans_pdf.filename),
+                file_type="pdf",
+                file_size_kb=ans_size_kb,
+                page_count=ans_page_count,
+                doc_role="student_submission",
+            )
+            
+            db.session.add(key_doc_record)
+            db.session.add(ans_doc_record)
+            db.session.commit()
+        except Exception as e:
+            print(f"[DOC LOG ERROR] {e}")
 
 
         # Extract once, then grade from text (lets us reuse extraction in async too)
@@ -1865,6 +1910,32 @@ def grade_async():
     key_file.save(key_path)
     ans_file.save(ans_path)
 
+    # Save document metadata
+    try:
+        key_doc = Document(
+            id=str(uuid.uuid4()),
+            user_id=session.get("user_id"),
+            filename=f"{task_id}_key.pdf",
+            original_name=secure_filename(key_file.filename),
+            file_type="pdf",
+            file_size_kb=os.path.getsize(key_path) // 1024,
+            doc_role="answer_key",
+        )
+        ans_doc = Document(
+            id=str(uuid.uuid4()),
+            user_id=session.get("user_id"),
+            filename=f"{task_id}_ans.pdf",
+            original_name=secure_filename(ans_file.filename),
+            file_type="pdf",
+            file_size_kb=os.path.getsize(ans_path) // 1024,
+            doc_role="student_submission",
+        )
+        db.session.add(key_doc)
+        db.session.add(ans_doc)
+        db.session.commit()
+    except Exception as e:
+        print(f"[DOC LOG ERROR] {e}")
+
     force_ocr = "force_ocr" in request.form
 
     # ✅ NEW: add timestamps + error fields so status_json can stop polling safely
@@ -2018,9 +2089,36 @@ def upload_file():
                 continue
 
             fname = secure_filename(f.filename)
-            path = os.path.join(app.config["UPLOAD_FOLDER"], f"{uuid.uuid4().hex}_{fname}")
+            file_uuid = uuid.uuid4().hex
+            path = os.path.join(app.config["UPLOAD_FOLDER"], f"{file_uuid}_{fname}")
             try:
                 f.save(path)
+                try:
+                    ext = fname.rsplit(".", 1)[-1].lower() if "." in fname else ""
+                    file_size_kb = os.path.getsize(path) // 1024
+                    page_count = None
+                    if ext == "pdf":
+                        try:
+                            page_count = len(PdfReader(filepath).pages)
+                        except Exception:
+                            page_count = None
+
+                    doc_record = Document(
+                        id=str(uuid.uuid4()),
+                        user_id=session.get("user_id"),
+                        filename=f"{file_uuid}_{filename}",
+                        original_name=filename,
+                        file_type=ext,
+                        file_size_kb=file_size_kb,
+                        page_count=page_count,
+                        doc_role=action,
+                    )
+
+                    db.session.add(doc_record)
+                    db.session.commit()
+                except Exception as e:
+                    print(f"[DOC LOG ERROR] {e}")
+
                 ext = fname.rsplit(".", 1)[1].lower()
                 if ext in {"ppt", "pptx"}:
                     txt, _ = extract_text_from_ppt_with_slides(path)
