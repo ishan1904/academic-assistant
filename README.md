@@ -235,8 +235,7 @@ Supports English and Spanish. Language can be toggled via the topbar and is save
 ## 📬 Contact
 
 - General: [Contact form](https://academicassist.com/contact)
-- Support: support@academicassist.com
-
+- Support: elizabeth.diaz@uta.edu
 ---
 
 *Built as part of a volunteer research project at the University of Texas at Arlington.*

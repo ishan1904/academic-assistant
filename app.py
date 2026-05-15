@@ -1277,8 +1277,11 @@ def generate_prompt(content: str, task: str, **kwargs) -> str:
     if task == "recommendation":
         today = datetime.today().strftime("%B %d, %Y")
         recommender_name = (kwargs.get("recommender_name") or "").strip()
-        position = (kwargs.get("position") or "").strip()
-        email = (kwargs.get("email") or "").strip()
+        position         = (kwargs.get("position") or "").strip()
+        email            = (kwargs.get("email") or "").strip()
+        rec_mode         = (kwargs.get("rec_mode") or "resume").strip()
+        student_name     = (kwargs.get("student_name") or "the student").strip()
+        courses          = (kwargs.get("courses") or "").strip()
 
         header = "To Whom It May Concern,"
         if recommender_name and position and email:
@@ -1286,43 +1289,52 @@ def generate_prompt(content: str, task: str, **kwargs) -> str:
                 f"{recommender_name}\n{position}\n{email}\n\nTo Whom It May Concern,"
             )
 
-        return (
-            "Write a formal, professional recommendation letter for the candidate described in the resume below.\n"
-            f"Date: {today}\n\n"
-            f"Use this recommender header exactly:\n{header}\n\n"
-            "Include: relationship/context, 3–5 strengths with examples, and a strong closing endorsement.\n"
-            "Formatting requirements (must follow exactly):\n"
-            """
-                - Use plain text only.
-                - Preserve line breaks.
-                - The top block must be exactly:
+        formatting = """
+            - Use plain text only.
+            - Preserve line breaks.
+            - The top block must be exactly:
 
-                <Recommender Name>
-                <Recommender Role/Title or leave blank>
-                <Recommender Email or leave blank>
-                <Month DD, YYYY>
+            <Recommender Name>
+            <Recommender Role/Title or leave blank>
+            <Recommender Email or leave blank>
+            <Month DD, YYYY>
 
-                (blank line)
-                To Whom It May Concern,
+            (blank line)
+            To Whom It May Concern,
 
-                (blank line)
-                <Body paragraphs separated by a blank line>
+            (blank line)
+            <Body paragraphs separated by a blank line>
 
-                (blank line)
-                Sincerely,
+            (blank line)
+            Sincerely,
 
-                <Recommender Name only>
+            <Recommender Name only>
+        """
 
-                Rules:
-                - Do not put name/title/email on the same line.
-                - "Sincerely," must be on its own line.
-                - The final line must contain only the recommender name (no title, no email).
-
-            """
-            "Resume Content:\n"
-            + content
-        )
-
+        if rec_mode == "syllabus":
+            return (
+                f"Write a formal, professional recommendation letter for a student named {student_name}.\n"
+                f"Date: {today}\n\n"
+                f"Use this recommender header exactly:\n{header}\n\n"
+                f"The instructor is writing this letter based on the student's performance in the following courses: {courses}.\n"
+                "Use the course syllabi provided below to understand the course content, learning outcomes, and difficulty level.\n"
+                "Based on the syllabi, infer the student's academic strengths, skills developed, and suitability for future opportunities.\n"
+                "Include: how the instructor knows the student, 3-5 strengths with course-specific examples, and a strong closing endorsement.\n"
+                f"Formatting requirements (must follow exactly):\n{formatting}\n\n"
+                "Course Syllabi Content:\n"
+                f"{content}"
+            )
+        else:
+            return (
+                "Write a formal, professional recommendation letter for the candidate described in the resume below.\n"
+                f"Date: {today}\n\n"
+                f"Use this recommender header exactly:\n{header}\n\n"
+                "Include: relationship/context, 3-5 strengths with examples, and a strong closing endorsement.\n"
+                f"Formatting requirements (must follow exactly):\n{formatting}\n\n"
+                "Resume:\n"
+                f"{content}"
+            )
+        
     if task == "exam_papers":
         num_students = int(kwargs.get("num_students", 1))
         qps = int(kwargs.get("questions_per_student", 5))
@@ -2289,6 +2301,9 @@ def upload_file():
             recommender_name=request.form.get("recommender_name", ""),
             position=request.form.get("position", ""),
             email=request.form.get("email", ""),
+            rec_mode=request.form.get("rec_mode", "resume"),
+            student_name=request.form.get("student_name", ""),
+            courses=request.form.get("courses", ""),
         )
     elif action == "research":
         prompt = generate_prompt(

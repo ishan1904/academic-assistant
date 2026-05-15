@@ -1445,12 +1445,32 @@
         ──────────────────────────────────────────────────────────── -->
         <div id="resume-section" class="section-panel">
             <p class="section-heading">{{ t('recommendation_letter_assistance') }}</p>
-            <p class="section-sub">{{ t('resume_upload_desc') }}</p>
+            <p class="section-sub">Generate professional recommendation letters — from a student's resume or based on course syllabi.</p>
 
-            <div class="card">
+            <!-- Mode toggle tabs -->
+            <div style="display:flex; gap:0; margin-bottom:1.25rem; background:var(--bg-surface); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; width:fit-content;">
+                <button id="tab-resume" onclick="switchRecMode('resume')"
+                    style="padding:8px 20px; font-size:0.82rem; font-weight:600; font-family:var(--font-mono);
+                        background:var(--accent-dim); color:var(--accent); border:none; cursor:pointer;
+                        border-right:1px solid var(--border); transition:0.2s;">
+                    <i class="fas fa-file-alt"></i> Resume Based
+                </button>
+                <button id="tab-syllabus" onclick="switchRecMode('syllabus')"
+                    style="padding:8px 20px; font-size:0.82rem; font-weight:600; font-family:var(--font-mono);
+                        background:transparent; color:var(--text-muted); border:none; cursor:pointer; transition:0.2s;">
+                    <i class="fas fa-book"></i> Syllabus Based
+                </button>
+            </div>
+
+            <!-- Resume Based Form -->
+            <div id="rec-resume-form" class="card">
                 <div class="card-icon"><i class="fas fa-envelope-open-text"></i></div>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Upload a student's resume and the AI will generate a professional recommendation letter highlighting their skills and experience.
+                </p>
                 <form id="recUploadForm" action="/upload" method="POST" enctype="multipart/form-data">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="rec_mode" value="resume">
                     <div class="form-row">
                         <div class="field">
                             <label>{{ t('choose_pdf_docx') }}</label>
@@ -1472,6 +1492,49 @@
                 </form>
             </div>
 
+            <!-- Syllabus Based Form -->
+            <div id="rec-syllabus-form" class="card" style="display:none;">
+                <div class="card-icon"><i class="fas fa-book-open"></i></div>
+                <p style="font-size:0.85rem; color:var(--text-muted); margin-bottom:1rem;">
+                    Upload one or more course syllabi. The AI will generate a recommendation letter for the student based on the course content and learning outcomes — no resume needed.
+                </p>
+                <form id="recSyllabusForm" action="/upload" method="POST" enctype="multipart/form-data">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="action" value="recommendation">
+                    <input type="hidden" name="rec_mode" value="syllabus">
+                    <div class="form-row">
+                        <div class="field">
+                            <label>Student Name</label>
+                            <input type="text" name="student_name" placeholder="e.g. John Smith" required>
+                        </div>
+                        <div class="field">
+                            <label>Courses Taken</label>
+                            <input type="text" name="courses"
+                                placeholder="e.g. Cloud Computing, Data Mining, AI Ethics">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="field">
+                            <label>Upload Course Syllabi (PDF/DOCX — you can select multiple)</label>
+                            <input type="file" name="file" accept=".pdf,.docx" multiple required>
+                        </div>
+                        <div class="field">
+                            <label>{{ t('select_ai_model') }}</label>
+                            <select name="ai_model">
+                                <option value="openai">OpenAI GPT-4o mini</option>
+                                <option value="claude">Claude Sonnet</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-primary" onclick="showSyllabusRecModal()">
+                            <i class="fas fa-pen-nib"></i> Generate Recommendation Letter
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- Output panel — shared by both modes -->
             <div class="output-panel" id="resume-output">
                 <div class="output-header">
                     <div class="output-title"><i class="fas fa-circle"></i> {{ t('output_label') | default('OUTPUT') }}</div>
@@ -1486,7 +1549,6 @@
                 </div>
             </div>
         </div>
-
         <!-- ────────────────────────────────────────────────────────
              EXAM SECTION
         ──────────────────────────────────────────────────────────── -->
@@ -1914,25 +1976,27 @@
 ════════════════════════════════════════════════════════════════════ -->
 
 <!-- Recommendation Modal -->
+<!-- Recommendation Modal — Resume Mode -->
 <div id="recModal" class="modal">
     <div class="modal-box">
         <div class="modal-close" onclick="closeRecModal()"><i class="fas fa-times"></i></div>
         <h2 class="modal-title">{{ t('enter_recommender_details') }}</h2>
-        <p class="modal-sub">{{ t('recommendation_modal_sub') | default('These details will appear in the generated letter header.') }}</p>
+        <p class="modal-sub">These details will appear in the generated letter header.</p>
         <form id="recForm" method="POST" action="/upload" enctype="multipart/form-data">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
             <input type="hidden" name="action" value="recommendation">
+            <input type="hidden" name="rec_mode" value="resume">
             <input type="hidden" name="ai_model" id="hidden_rec_ai_model">
             <input type="hidden" name="resume_file" id="hidden_resume_file">
             <div class="field">
                 <label>{{ t('recommender_name') }}</label>
                 <input type="text" id="recommender_name" name="recommender_name" required
-                       placeholder="{{ t('recommender_name_placeholder') | default('Prof. Jane Smith') }}">
+                       placeholder="Prof. Jane Smith">
             </div>
             <div class="field">
                 <label>{{ t('position') }}</label>
                 <input type="text" id="position" name="position" required
-                       placeholder="{{ t('position_placeholder') | default('Associate Professor, Dept. of CS') }}">
+                       placeholder="Associate Professor, Dept. of CS">
             </div>
             <div class="field">
                 <label>{{ t('email') }}</label>
@@ -1942,6 +2006,44 @@
             <div class="btn-group">
                 <button type="submit" class="btn btn-primary"><i class="fas fa-pen-nib"></i> {{ t('generate_letter') }}</button>
                 <button type="button" class="btn btn-secondary" onclick="closeRecModal()">{{ t('cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Recommendation Modal — Syllabus Mode -->
+<div id="recSyllabusModal" class="modal">
+    <div class="modal-box">
+        <div class="modal-close" onclick="closeSyllabusRecModal()"><i class="fas fa-times"></i></div>
+        <h2 class="modal-title">Recommender Details</h2>
+        <p class="modal-sub">These details will appear in the letter header as the signing instructor.</p>
+        <form id="recSyllabusFormFinal" method="POST" action="/upload" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="hidden" name="action" value="recommendation">
+            <input type="hidden" name="rec_mode" value="syllabus">
+            <input type="hidden" name="ai_model" id="hidden_syllabus_ai_model">
+            <input type="hidden" name="student_name" id="hidden_student_name">
+            <input type="hidden" name="courses" id="hidden_courses">
+            <div class="field">
+                <label>Your Name (Recommender)</label>
+                <input type="text" name="recommender_name" required
+                       placeholder="Prof. Jane Smith">
+            </div>
+            <div class="field">
+                <label>Your Title / Position</label>
+                <input type="text" name="position" required
+                       placeholder="Associate Professor, Dept. of CS">
+            </div>
+            <div class="field">
+                <label>Your Email</label>
+                <input type="email" name="email" required
+                       placeholder="professor@university.edu">
+            </div>
+            <!-- Syllabus files passed via JS -->
+            <div id="syllabus-files-container"></div>
+            <div class="btn-group">
+                <button type="submit" class="btn btn-primary"><i class="fas fa-pen-nib"></i> Generate Letter</button>
+                <button type="button" class="btn btn-secondary" onclick="closeSyllabusRecModal()">Cancel</button>
             </div>
         </form>
     </div>
@@ -2037,6 +2139,14 @@ function showSection(section) {
     const target = document.getElementById(`${section}-section`);
     if (target) target.classList.add('active');
 
+    // Clear recommendation output when switching away from it
+    if (section !== 'resume') {
+        const pre = document.getElementById('resume-output-pre');
+        const panel = document.getElementById('resume-output');
+        if (pre) pre.innerHTML = '';
+        if (panel) panel.style.display = 'none';
+    }
+
     const top = document.querySelector('.hero');
     if (window.innerWidth <= 900 && top) {
         window.scrollTo({ top: top.offsetTop - 10, behavior: 'smooth' });
@@ -2076,6 +2186,73 @@ function showRecModal() {
     openModal('recModal');
 }
 function closeRecModal() { closeModalId('recModal'); }
+
+// ── Recommendation mode toggle ──────────────────────────
+function switchRecMode(mode) {
+    const resumeForm    = document.getElementById('rec-resume-form');
+    const syllabusForm  = document.getElementById('rec-syllabus-form');
+    const tabResume     = document.getElementById('tab-resume');
+    const tabSyllabus   = document.getElementById('tab-syllabus');
+
+    if (mode === 'resume') {
+        resumeForm.style.display   = 'block';
+        syllabusForm.style.display = 'none';
+        tabResume.style.background    = 'var(--accent-dim)';
+        tabResume.style.color         = 'var(--accent)';
+        tabSyllabus.style.background  = 'transparent';
+        tabSyllabus.style.color       = 'var(--text-muted)';
+    } else {
+        resumeForm.style.display   = 'none';
+        syllabusForm.style.display = 'block';
+        tabSyllabus.style.background  = 'var(--accent-dim)';
+        tabSyllabus.style.color       = 'var(--accent)';
+        tabResume.style.background    = 'transparent';
+        tabResume.style.color         = 'var(--text-muted)';
+    }
+}
+
+// ── Syllabus recommendation modal ───────────────────────
+function showSyllabusRecModal() {
+    const form = document.getElementById('recSyllabusForm');
+    const studentName = form.querySelector('[name="student_name"]').value.trim();
+    const courses     = form.querySelector('[name="courses"]').value.trim();
+    const aiModel     = form.querySelector('[name="ai_model"]').value;
+    const files       = form.querySelector('[name="file"]').files;
+
+    if (!studentName) {
+        alert('Please enter the student name.');
+        return;
+    }
+    if (!files || files.length === 0) {
+        alert('Please upload at least one syllabus file.');
+        return;
+    }
+
+    // Pass values to the modal's hidden fields
+    document.getElementById('hidden_student_name').value  = studentName;
+    document.getElementById('hidden_courses').value       = courses;
+    document.getElementById('hidden_syllabus_ai_model').value = aiModel;
+
+    // Copy files into the modal form
+    const container = document.getElementById('syllabus-files-container');
+    container.innerHTML = '';
+    const dt = new DataTransfer();
+    for (let i = 0; i < files.length; i++) dt.items.add(files[i]);
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.name = 'file';
+    fileInput.multiple = true;
+    fileInput.style.display = 'none';
+    fileInput.files = dt.files;
+    container.appendChild(fileInput);
+
+    document.getElementById('recSyllabusModal').style.display = 'flex';
+}
+
+function closeSyllabusRecModal() {
+    document.getElementById('recSyllabusModal').style.display = 'none';
+}
+
 
 function showExamModal() {
     const files = document.getElementById('exam_files');
@@ -2705,6 +2882,32 @@ document.getElementById('recForm')?.addEventListener('submit', async function(e)
         renderAiOutput('recommendation', { error: e.message });
         showSection('resume');
     } finally { hideProcessing(); }
+});
+
+// ── Syllabus recommendation AJAX handler ─────────────────────────
+document.getElementById('recSyllabusFormFinal')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    closeSyllabusRecModal();
+    showProcessing();
+
+    const fd = new FormData(this);
+
+    try {
+        const res = await fetch('/upload', {
+            method: 'POST',
+            body: fd,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
+        renderAiOutput('recommendation', data.result ?? data);
+        showSection('resume');
+    } catch(err) {
+        renderAiOutput('recommendation', { error: err.message });
+        showSection('resume');
+    } finally {
+        hideProcessing();
+    }
 });
 
 // ── Questions form AJAX ───────────────────────────────────────────
