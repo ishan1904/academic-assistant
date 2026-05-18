@@ -2,7 +2,7 @@
 
 An AI-powered academic support platform built for educators and students. Automates grading, question generation, exam paper creation, research briefs, citation formatting, and more — using a multi-provider LLM architecture with intelligent caching.
 
-**Live:** [academicassist.com](https://academicassist.com) &nbsp;|&nbsp; **Deployed on:** Railway &nbsp;|&nbsp; **Built with:** Python, Flask, PostgreSQL
+**Live:** [academicassistant]([https://academicassistant-production.up.railway.app/]) &nbsp;|&nbsp; **Deployed on:** Railway &nbsp;|&nbsp; **Built with:** Python, Flask, PostgreSQL
 
 ---
 
@@ -219,9 +219,9 @@ Supports English and Spanish. Language can be toggled via the topbar and is save
 
 ## 📄 Legal
 
-- [Privacy Policy](https://academicassist.com/privacy) — GDPR and FERPA compliant
-- [Terms of Service](https://academicassist.com/terms)
-- [About](https://academicassist.com/about)
+- [Privacy Policy](https://academicassistant-production.up.railway.app/privacy) — GDPR and FERPA compliant
+- [Terms of Service](https://academicassistant-production.up.railway.app/terms)
+- [About](https://academicassistant-production.up.railway.app/about)
 
 ---
 
@@ -234,7 +234,7 @@ Supports English and Spanish. Language can be toggled via the topbar and is save
 
 ## 📬 Contact
 
-- General: [Contact form](https://academicassist.com/contact)
+- General: [Contact form](https://academicassistant-production.up.railway.app/contact)
 - Support: elizabeth.diaz@uta.edu
 ---
 
